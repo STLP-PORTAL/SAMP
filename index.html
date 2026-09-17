@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Asset Management Portal (SAMP) - Talwandi Sabo Thermal Plant</title>
+  
+  <!-- Chart.js & Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-dark: #1e293b;
+      --text-dark: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-dark: #334155;
+      --safety-blue: #2563eb;
+      --safety-green: #22c55e;
+      --safety-yellow: #eab308;
+      --safety-red: #ef4444;
+    }
+
+    [data-theme="light"] {
+      --bg-dark: #f1f5f9;
+      --card-dark: #ffffff;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border-dark: #cbd5e1;
+    }
+
+    [data-theme="blue"] {
+      --bg-dark: #0a192f;
+      --card-dark: #112d4e;
+      --text-dark: #f0f9ff;
+      --text-muted: #93c5fd;
+      --border-dark: rgba(147, 197, 253, 0.25);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .hidden-screen {
+      display: none !important;
+    }
+
+    .stlp-header {
+      background: var(--card-dark);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stlp-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    .stlp-btn {
+      background: var(--safety-blue);
+      color: #ffffff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+
+    .stlp-btn:hover {
+      opacity: 0.9;
+    }
+
+    .stlp-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed !important;
+      background: var(--border-dark) !important;
+    }
+
+    .dashboard-module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px 8px;
+      align-items: start;
+    }
+
+    .stlp-module-stub {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .stlp-module-stub .stlp-btn {
+      width: 100%;
+      margin: 0;
+    }
+
+    .stlp-under-dev-note {
+      margin-top: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--safety-yellow);
+      text-align: center;
+    }
+
+    .under-dev-modal-content {
+      max-width: 380px;
+      text-align: center;
+    }
+
+    .under-dev-modal-content .under-dev-icon {
+      font-size: 2.4rem;
+      margin-bottom: 10px;
+    }
+
+    .under-dev-modal-content h3 {
+      margin: 0 0 10px;
+    }
+
+    .under-dev-modal-content p {
+      color: var(--text-muted);
+      margin: 0 0 20px;
+    }
+
+    .under-dev-modal-content .stlp-btn {
+      background: var(--safety-yellow);
+      color: #1a1400;
+    }
+
+    .stlp-btn-sm {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: var(--safety-blue);
+      color: #ffffff;
+    }
+
+    .hoist-controls-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      background: var(--card-dark);
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .select-all-top-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--border-dark);
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .stlp-table-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: calc(100vh - 220px);
+      overflow-x: auto;
+      overflow-y: auto;
+      position: relative;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      background: var(--card-dark);
+    }
+
+    .stlp-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    .stlp-table th, .stlp-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-dark);
+      white-space: nowrap;
+    }
+
+    .stlp-table th {
+      background: var(--border-dark);
+      color: var(--text-dark);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .badge-status {
+      padding: 0.25rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      display: inline-block;
+    }
+    .badge-valid { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .badge-due-30 { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .badge-expired { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+    .stlp-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .stlp-modal-content {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .tag-nom {
+      background: rgba(37, 99, 235, 0.15);
+      color: #60a5fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    /* ============================================================
+       GLOBAL BUTTON MICRO-INTERACTIONS
+       Hover lift, press-scale, and click ripple — applies to every
+       .stlp-btn / .stlp-btn-sm across the whole portal, including
+       buttons rendered dynamically inside tables.
+       ============================================================ */
+    .stlp-btn, .stlp-btn-sm {
+      position: relative;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.16s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease, filter 0.2s ease;
+      will-change: transform;
+    }
+    .stlp-btn:hover:not(:disabled), .stlp-btn-sm:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+    .stlp-btn:active:not(:disabled), .stlp-btn-sm:active:not(:disabled) {
+      transform: translateY(0) scale(0.95);
+      filter: brightness(0.96);
+    }
+    .ripple-el {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      background: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+      animation: rippleAnim 0.6s ease-out forwards;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(2.6); opacity: 0; }
+    }
+
+    /* ============================================================
+       LOGIN SCREEN — LAYOUT SYSTEM (Aurora Glass / Neumorphic Soft)
+       Controlled by body[data-login-layout], independent of the
+       dark/light/blue color theme. Only affects the auth screen.
+       ============================================================ */
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+
+    .auth-screen {
+      position: relative;
+      min-height: calc(100vh - 76px);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px !important;
+    }
+
+    .aurora-bg, .neu-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; display: none; }
+    .aurora-blob, .neu-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
+
+    .auth-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      padding: 40px 34px;
+    }
+    .auth-card-mark { font-size: 26px; margin-bottom: 14px; }
+    .auth-card h3 { margin: 0 0 4px 0; font-size: 22px; }
+    .auth-card-sub { margin: 0 0 24px 0; font-size: 13px; }
+    .auth-field { margin-bottom: 16px; text-align: left; }
+    .auth-field label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+    .auth-field input { width: 100%; padding: 12px 13px; font-size: 14px; box-sizing: border-box; }
+    .auth-btn-primary { width: 100%; margin-top: 4px; font-weight: 700; }
+    .auth-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; font-size: 11.5px; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; }
+    .auth-btn-guest { width: 100%; font-weight: 700; }
+
+    /* ---------- AURORA GLASS ---------- */
+    body[data-login-layout="aurora"] .auth-screen { background: #080a12; font-family: 'Sora', sans-serif; }
+    body[data-login-layout="aurora"] .aurora-bg { display: block; }
+    body[data-login-layout="aurora"] .aurora-blob { opacity: 0.55; animation: auroraDrift 16s ease-in-out infinite alternate; }
+    body[data-login-layout="aurora"] .b1 { width: 420px; height: 420px; background: #7c3aed; top: -120px; left: -80px; }
+    body[data-login-layout="aurora"] .b2 { width: 380px; height: 380px; background: #22d3ee; bottom: -140px; right: -60px; animation-delay: -4s; }
+    body[data-login-layout="aurora"] .b3 { width: 300px; height: 300px; background: #f472b6; top: 40%; right: 15%; animation-delay: -9s; }
+    @keyframes auroraDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(40px,30px) scale(1.12); } }
+    body[data-login-layout="aurora"] .auth-card {
+      background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    body[data-login-layout="aurora"] .auth-card-mark {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg,#7c3aed,#22d3ee);
+      display: flex; align-items: center; justify-content: center;
+    }
+    body[data-login-layout="aurora"] .auth-card h3 { color: #fff; font-weight: 700; }
+    body[data-login-layout="aurora"] .auth-card-sub { color: #b9bcc7; font-family: 'Inter', sans-serif; }
+    body[data-login-layout="aurora"] .auth-field label { color: #c9cdd6; font-family: 'Inter', sans-serif; font-weight: 500; }
+    body[data-login-layout="aurora"] .auth-field input {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px; color: #fff; font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    body[data-login-layout="aurora"] .auth-field input:focus {
+      outline: none; border-color: #a78bfa; background: rgba(255,255,255,0.1);
+    }
+    body[data-login-layout="aurora"] .auth-btn-primary {
+      background: linear-gradient(135deg,#7c3aed,#a855f7) !important;
+      color: #fff !important; border: none !important; border-radius: 12px !important;
+      padding: 13px !important; box-shadow: 0 8px 24px rgba(124,58,237,0.35);
+    }
+    body[data-login-layout="aurora"] .auth-divider { color: #7d8190; font-family: 'Inter', sans-serif; }
+    body[data-login-layout="aurora"] .auth-divider::before, body[data-login-layout="aurora"] .auth-divider::after { background: rgba(255,255,255,0.14); }
+    body[data-login-layout="aurora"] .auth-btn-guest {
+      background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.16) !important;
+      color: #e8ebef !important; border-radius: 12px !important; padding: 12px !important; font-family: 'Inter', sans-serif;
+    }
+
+    /* ---------- NEUMORPHIC SOFT ---------- */
+    body[data-login-layout="neumorph"] .auth-screen { background: #e9edf3; font-family: 'Manrope', sans-serif; }
+    body[data-login-layout="neumorph"] .neu-bg { display: block; }
+    body[data-login-layout="neumorph"] .neu-orb { opacity: 0.6; }
+    body[data-login-layout="neumorph"] .n1 { width: 280px; height: 280px; background: #c7f9e5; top: 40px; left: 60px; }
+    body[data-login-layout="neumorph"] .n2 { width: 260px; height: 260px; background: #ffe0c2; bottom: 40px; right: 100px; }
+    body[data-login-layout="neumorph"] .n3 { width: 220px; height: 220px; background: #d9d6ff; top: 260px; right: 10%; }
+    body[data-login-layout="neumorph"] .auth-card {
+      background: #e9edf3;
+      border-radius: 32px;
+      box-shadow: 14px 14px 28px #cbd0d8, -14px -14px 28px #ffffff;
+    }
+    body[data-login-layout="neumorph"] .auth-card-mark {
+      width: 52px; height: 52px; border-radius: 16px; margin: 0 auto 18px;
+      background: #e9edf3; box-shadow: 6px 6px 12px #cdd2da, -6px -6px 12px #ffffff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    body[data-login-layout="neumorph"] .auth-card h3, body[data-login-layout="neumorph"] .auth-card-sub { text-align: center; }
+    body[data-login-layout="neumorph"] .auth-card h3 { color: #2c3140; font-weight: 700; }
+    body[data-login-layout="neumorph"] .auth-card-sub { color: #6b7280; }
+    body[data-login-layout="neumorph"] .auth-field label { color: #6b7280; font-weight: 600; }
+    body[data-login-layout="neumorph"] .auth-field input {
+      background: #e9edf3; border: none; border-radius: 14px; color: #2c3140;
+      box-shadow: inset 4px 4px 8px #cdd2da, inset -4px -4px 8px #ffffff;
+    }
+    body[data-login-layout="neumorph"] .auth-field input:focus { outline: none; }
+    body[data-login-layout="neumorph"] .auth-btn-primary {
+      background: linear-gradient(135deg,#6ee7b7,#34d399) !important;
+      color: #0f2b20 !important; border: none !important; border-radius: 14px !important;
+      padding: 13px !important; box-shadow: 6px 6px 14px #cdd2da, -3px -3px 10px #ffffff;
+    }
+    body[data-login-layout="neumorph"] .auth-divider { color: #9aa0ab; justify-content: center; }
+    body[data-login-layout="neumorph"] .auth-divider::before, body[data-login-layout="neumorph"] .auth-divider::after { background: #d3d8e0; }
+    body[data-login-layout="neumorph"] .auth-btn-guest {
+      background: #e9edf3 !important; border: none !important; color: #5b6270 !important;
+      border-radius: 14px !important; padding: 12px !important;
+      box-shadow: 5px 5px 10px #cdd2da, -5px -5px 10px #ffffff;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- PORTAL HEADER -->
+  <header class="stlp-header">
+    <div>
+      <h2 style="margin:0; font-size:1.25rem;">Safety Asset Management Portal (SAMP)</h2>
+      <small style="color:var(--text-muted);">Talwandi Sabo Thermal Plant</small>
+    </div>
+    <div style="display:flex; align-items:center; gap:15px;">
+      <div id="header-user-status"></div>
+      <div class="layout-switcher-wrapper" style="position:relative;">
+        <button class="stlp-btn-sm" onclick="toggleLayoutMenu()">🖼️ Layout</button>
+        <div id="layout-dropdown" class="hidden-screen" style="position:absolute; top:calc(100% + 6px); right:0; z-index:100; min-width:190px; background:var(--card-dark); border:1px solid var(--border-dark); border-radius:8px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 10px 25px rgba(0,0,0,0.4);">
+          <button type="button" id="layout-opt-aurora" class="stlp-btn-sm" style="background:transparent; text-align:left; color:var(--text-dark);" onclick="setLoginLayout('aurora')">🌌 Aurora Glass</button>
+          <button type="button" id="layout-opt-neumorph" class="stlp-btn-sm" style="background:transparent; text-align:left; color:var(--text-dark);" onclick="setLoginLayout('neumorph')">🩵 Neumorphic Soft</button>
+        </div>
+      </div>
+      <div class="theme-switcher-wrapper" style="position:relative;">
+        <button class="stlp-btn-sm" onclick="toggleThemeMenu()">🎨 Theme</button>
+        <div id="theme-dropdown" class="hidden-screen" style="position:absolute; top:calc(100% + 6px); right:0; z-index:100; min-width:140px; background:var(--card-dark); border:1px solid var(--border-dark); border-radius:8px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 10px 25px rgba(0,0,0,0.4);">
+          <button type="button" class="stlp-btn-sm" style="background:transparent; text-align:left; color:var(--text-dark);" onclick="setPortalTheme('dark')">🌑 Dark</button>
+          <button type="button" class="stlp-btn-sm" style="background:transparent; text-align:left; color:var(--text-dark);" onclick="setPortalTheme('light')">☀️ Light</button>
+          <button type="button" class="stlp-btn-sm" style="background:transparent; text-align:left; color:var(--text-dark);" onclick="setPortalTheme('blue')">🔵 Blue</button>
+        </div>
+      </div>
+      <button class="stlp-btn-sm" style="background:var(--border-dark);" onclick="handleLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- AUTH SCREEN -->
+  <div id="stlp-auth-screen" class="stlp-container auth-screen">
+
+    <!-- Aurora Glass decorative background (visible only when this layout is active) -->
+    <div class="aurora-bg">
+      <span class="aurora-blob b1"></span>
+      <span class="aurora-blob b2"></span>
+      <span class="aurora-blob b3"></span>
+    </div>
+
+    <!-- Neumorphic Soft decorative background (visible only when this layout is active) -->
+    <div class="neu-bg">
+      <span class="neu-orb n1"></span>
+      <span class="neu-orb n2"></span>
+      <span class="neu-orb n3"></span>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-card-mark">🛡️</div>
+      <h3>Portal Access</h3>
+      <p class="auth-card-sub">Sign in to manage plant safety records</p>
+      <form onsubmit="return handleAdminLogin(event)">
+        <div class="auth-field">
+          <label>Username</label>
+          <input type="text" id="login-username" required />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="login-password" required />
+        </div>
+        <button type="submit" class="stlp-btn auth-btn-primary">Login as Admin</button>
+      </form>
+      <div class="auth-divider">or</div>
+      <button type="button" class="stlp-btn auth-btn-guest" onclick="handleGuestAccess()">View as Guest (Read Only)</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD SCREEN -->
+  <div id="safety-dashboard-screen" class="stlp-container hidden-screen">
+    <h2>Safety Inspection & Asset Analytics</h2>
+    <p>Select a module to monitor assets:</p>
+    <div class="dashboard-module-grid">
+      <div class="stlp-module-stub">
+        <button class="stlp-btn" onclick="renderHoistModule()">Hoist &amp; TPI Records</button>
+      </div>
+      <div class="stlp-module-stub">
+        <button class="stlp-btn" onclick="renderVesselModule()">Pressure Vessels</button>
+      </div>
+      <div class="stlp-module-stub">
+        <button class="stlp-btn" onclick="showModuleUnderDevelopment('Vehicle Inspection')">Vehicle Inspection</button>
+        <span class="stlp-under-dev-note">Module Under Development</span>
+      </div>
+      <div class="stlp-module-stub">
+        <button class="stlp-btn" onclick="showModuleUnderDevelopment('Tools &amp; Tackles')">Tools &amp; Tackles</button>
+        <span class="stlp-under-dev-note">Module Under Development</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOIST & TPI MODULE SCREEN -->
+  <div id="hoist-module-screen" class="stlp-container hidden-screen">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h3>Hoist & TPI Records — Inspection Validity Monitoring</h3>
+      <button class="stlp-btn-sm" style="background:var(--border-dark);" onclick="showScreen('safety-dashboard-screen')">⬅ Back to Dashboard</button>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); margin-bottom:1.5rem; display:flex; gap:10px; flex-wrap:wrap;">
+      <input type="text" id="filter-global-search" placeholder="Search equipment..." onkeyup="applyHoistFilters()" style="padding:6px; flex:1; min-width:180px;" />
+      <select id="filter-plant-section" onchange="applyHoistFilters()" style="padding:6px;"><option value="">All Sections</option></select>
+      <select id="filter-tpi-status" onchange="applyHoistFilters()" style="padding:6px;">
+        <option value="">All TPI Status</option>
+        <option value="valid">Valid 🟢</option>
+        <option value="due">Due Soon 🟡</option>
+        <option value="expired">Expired 🔴</option>
+      </select>
+      <select id="filter-hoist-type" onchange="applyHoistFilters()" style="padding:6px;"><option value="">All Types</option></select>
+      <select id="filter-healthiness" onchange="applyHoistFilters()" style="padding:6px;"><option value="">All Conditions</option></select>
+      <select id="filter-running" onchange="applyHoistFilters()">
+        <option value="">All Running Status</option>
+        <option value="Running">Running</option>
+        <option value="Obsolute">Obsolute</option>
+      </select>
+      <select id="filter-tpi-agency" onchange="applyHoistFilters()">
+        <option value="">All TPI Agency</option>
+        <option value="TPI DONE">TPI Done</option>
+        <option value="PENDING">Pending</option>
+      </select>
+      <button class="stlp-btn-sm" style="background:var(--border-dark);" onclick="resetHoistFilters()">Reset Filters</button>
+    </div>
+
+    <!-- ACTIVE FILTERS INDICATOR -->
+    <div id="filter-active-indicator" style="margin-bottom:1rem; padding:0.6rem 1rem; background:var(--card-dark); border:1px solid var(--border-dark); border-radius:8px; font-size:0.85rem; color:var(--text-muted);">
+      Showing all asset records.
+    </div>
+
+    <!-- CHARTS AREA -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px; margin-bottom:1.5rem;">
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-status-donut"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-section-bar"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-health-pie"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-type-bar"></canvas>
+      </div>
+    </div>
+
+    <!-- TOP CONTROLS WITH SELECT ALL & DYNAMIC DELETE BUTTON -->
+    <div class="hoist-controls-bar">
+      <button type="button" class="stlp-btn" onclick="openAddHoistModal()">+ Add Equipment</button>
+      <button type="button" class="stlp-btn" onclick="triggerHoistExcelImport()">📥 Import Excel</button>
+      <button type="button" class="stlp-btn" onclick="exportHoistExcel()">📤 Export Excel</button>
+      <input type="file" id="hoist-excel-file" accept=".xlsx, .xls" style="display:none;" onchange="handleHoistExcelImport(event)" />
+      
+      <!-- TOP SELECT ALL CONTROL -->
+      <label class="select-all-top-wrapper" id="top-select-all-container">
+        <input 
+          type="checkbox" 
+          id="select-all-hoists-checkbox" 
+          onchange="toggleSelectAllHoists(this)" 
+        />
+        <span>Select All</span>
+      </label>
+
+      <!-- DYNAMIC ACTIVE/INACTIVE BULK DELETE BUTTON -->
+      <button
+        type="button"
+        id="btn-bulk-delete"
+        class="stlp-btn"
+        style="background: var(--safety-red, #ef4444);"
+        onclick="deleteSelectedHoists()"
+        disabled
+      >
+        🗑️ Delete Selected (0)
+      </button>
+    </div>
+
+    <!-- STATS COUNTER -->
+    <div style="margin-bottom:1rem; color:var(--text-muted); font-size:0.9rem;">
+      Total Assets: <strong id="stat-hoist-total" style="color:var(--text-dark);">0</strong> | 
+      Valid: <strong id="stat-hoist-valid" style="color:var(--safety-green);">0</strong> | 
+      Due Soon: <strong id="stat-hoist-due" style="color:var(--safety-yellow);">0</strong> | 
+      Expired: <strong id="stat-hoist-expired" style="color:var(--safety-red);">0</strong>
+    </div>
+
+    <!-- EQUIPMENT TABLE -->
+    <div class="stlp-table-container">
+      <table class="stlp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">SELECT</th>
+            <th onclick="handleTableSort('Sr. No.')" style="cursor: pointer;">SR. NO. ↕️</th>
+            <th onclick="handleTableSort('Plant Section')" style="cursor: pointer;">PLANT SECTION ↕️</th>
+            <th onclick="handleTableSort('Location')" style="cursor: pointer;">LOCATION ↕️</th>
+            <th onclick="handleTableSort('Equipment Name')" style="cursor: pointer;">EQUIPMENT NAME ↕️</th>
+            <th onclick="handleTableSort('Equipment Location')" style="cursor: pointer;">EQUIPMENT LOCATION ↕️</th>
+            <th onclick="handleTableSort('Hoist Type')" style="cursor: pointer;">HOIST TYPE ↕️</th>
+            <th onclick="handleTableSort('Nomenclature')" style="cursor: pointer;">NOMENCLATURE ↕️</th>
+            <th>MAKE</th>
+            <th>MFG</th>
+            <th>DETAILS</th>
+            <th>CERTIFICATE</th>
+            <th>TEST DATE</th>
+            <th>DUE DATE</th>
+            <th>CAPACITY</th>
+            <th>HEALTHINESS STATUS</th>
+            <th>POWER SUPPLY STATUS</th>
+            <th>RUNNING STATUS</th>
+            <th>FEEDER</th>
+            <th>PENDANT</th>
+            <th>REMARKS</th>
+            <th>EXPIRY REMINDER</th>
+            <th>EXPIRED</th>
+            <th>TPI</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="hoist-table-body">
+          <!-- Dynamic Rows -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       PRESSURE VESSEL MODULE SCREEN
+       ============================================================ -->
+  <div id="vessel-module-screen" class="stlp-container hidden-screen">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h3>Pressure Vessels — Hydro &amp; Thickness Test Validity Monitoring</h3>
+      <button class="stlp-btn-sm" style="background:var(--border-dark);" onclick="showScreen('safety-dashboard-screen')">⬅ Back to Dashboard</button>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); margin-bottom:1.5rem; display:flex; gap:10px; flex-wrap:wrap;">
+      <input type="text" id="vfilter-global-search" placeholder="Search vessel / serial no..." onkeyup="applyVesselFilters()" style="padding:6px; flex:1; min-width:180px;" />
+      <select id="vfilter-area" onchange="applyVesselFilters()" style="padding:6px;"><option value="">All Areas</option></select>
+      <select id="vfilter-location" onchange="applyVesselFilters()" style="padding:6px;"><option value="">All Locations</option></select>
+      <select id="vfilter-hydro-status" onchange="applyVesselFilters()" style="padding:6px;">
+        <option value="">All Hydro Status</option>
+        <option value="valid">Valid 🟢</option>
+        <option value="due">Due Soon 🟡</option>
+        <option value="expired">Expired 🔴</option>
+      </select>
+      <select id="vfilter-thickness-status" onchange="applyVesselFilters()" style="padding:6px;">
+        <option value="">All Thickness Status</option>
+        <option value="valid">Valid 🟢</option>
+        <option value="due">Due Soon 🟡</option>
+        <option value="expired">Expired 🔴</option>
+      </select>
+      <select id="vfilter-condition" onchange="applyVesselFilters()" style="padding:6px;"><option value="">All Conditions</option></select>
+      <button class="stlp-btn-sm" style="background:var(--border-dark);" onclick="resetVesselFilters()">Reset Filters</button>
+    </div>
+
+    <!-- ACTIVE FILTERS INDICATOR -->
+    <div id="vfilter-active-indicator" style="margin-bottom:1rem; padding:0.6rem 1rem; background:var(--card-dark); border:1px solid var(--border-dark); border-radius:8px; font-size:0.85rem; color:var(--text-muted);">
+      Showing all pressure vessel records.
+    </div>
+
+    <!-- CHARTS AREA -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px; margin-bottom:1.5rem;">
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-vessel-hydro-donut"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-vessel-area-bar"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-vessel-condition-pie"></canvas>
+      </div>
+      <div style="background:var(--card-dark); padding:1rem; border-radius:8px; border:1px solid var(--border-dark); height:220px;">
+        <canvas id="chart-vessel-thickness-bar"></canvas>
+      </div>
+    </div>
+
+    <!-- TOP CONTROLS -->
+    <div class="hoist-controls-bar">
+      <button type="button" class="stlp-btn" onclick="openAddVesselModal()">+ Add Vessel</button>
+      <button type="button" class="stlp-btn" onclick="triggerVesselExcelImport()">📥 Import Excel</button>
+      <button type="button" class="stlp-btn" onclick="exportVesselExcel()">📤 Export Excel</button>
+      <input type="file" id="vessel-excel-file" accept=".xlsx, .xls" style="display:none;" onchange="handleVesselExcelImport(event)" />
+
+      <label class="select-all-top-wrapper" id="vessel-top-select-all-container">
+        <input type="checkbox" id="select-all-vessels-checkbox" onchange="toggleSelectAllVessels(this)" />
+        <span>Select All</span>
+      </label>
+
+      <button
+        type="button"
+        id="btn-vessel-bulk-delete"
+        class="stlp-btn"
+        style="background: var(--safety-red, #ef4444);"
+        onclick="deleteSelectedVessels()"
+        disabled
+      >
+        🗑️ Delete Selected (0)
+      </button>
+    </div>
+
+    <!-- STATS COUNTER -->
+    <div style="margin-bottom:1rem; color:var(--text-muted); font-size:0.9rem;">
+      Total Vessels: <strong id="stat-vessel-total" style="color:var(--text-dark);">0</strong> |
+      Valid: <strong id="stat-vessel-valid" style="color:var(--safety-green);">0</strong> |
+      Due Soon: <strong id="stat-vessel-due" style="color:var(--safety-yellow);">0</strong> |
+      Expired: <strong id="stat-vessel-expired" style="color:var(--safety-red);">0</strong>
+    </div>
+
+    <!-- PRESSURE VESSEL TABLE -->
+    <div class="stlp-table-container">
+      <table class="stlp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">SELECT</th>
+            <th onclick="handleVesselTableSort('SN')" style="cursor: pointer;">SN ↕️</th>
+            <th onclick="handleVesselTableSort('Area')" style="cursor: pointer;">AREA ↕️</th>
+            <th onclick="handleVesselTableSort('Location')" style="cursor: pointer;">LOCATION ↕️</th>
+            <th onclick="handleVesselTableSort('Name of Vessel')" style="cursor: pointer;">NAME OF VESSEL (NATURE OF PROCESS) ↕️</th>
+            <th onclick="handleVesselTableSort('Vessel Serial Number')" style="cursor: pointer;">VESSEL SERIAL NUMBER ↕️</th>
+            <th>SWP RECOMMENDED BY MFR</th>
+            <th>TEST CERTIFICATE NO</th>
+            <th>LAST HYDRO TEST (A)</th>
+            <th>PRESENT HYDRO TEST DONE / DUE (B)</th>
+            <th onclick="handleVesselTableSort('Hydro Test Due Date')" style="cursor: pointer;">HYDRO TEST DUE DATE (C) ↕️</th>
+            <th>EXPIRY REMINDER</th>
+            <th>EXPIRED</th>
+            <th>LAST THICKNESS TEST (D)</th>
+            <th onclick="handleVesselTableSort('Thickness Test Due Date')" style="cursor: pointer;">THICKNESS TEST DUE DATE (6 MONTHS) ↕️</th>
+            <th>EXPIRY REMINDER</th>
+            <th>EXPIRED</th>
+            <th>CONSTRUCTED SHELL</th>
+            <th>CONSTRUCTED DISH</th>
+            <th>MIN ALLOWABLE SHELL</th>
+            <th>MIN ALLOWABLE DISH</th>
+            <th>MEASURED SHELL (UT)</th>
+            <th>MEASURED DISH (UT)</th>
+            <th>CALCULATED SWP</th>
+            <th>CONDITION</th>
+            <th>TPI OBSERVATION</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="vessel-table-body">
+          <!-- Dynamic Rows -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- VEHICLE MODULE SCREEN -->
+  <div id="vehicle-module-screen" class="stlp-container hidden-screen">
+    <h3>Vehicle Inspection Module</h3>
+    <button class="stlp-btn-sm" style="background:var(--border-dark); margin-bottom:1rem;" onclick="showScreen('safety-dashboard-screen')">⬅ Back to Dashboard</button>
+    <div class="stlp-table-container">
+      <table class="stlp-table">
+        <thead>
+          <tr><th>VEHICLE NO</th><th>TYPE</th><th>DEPT</th><th>FITNESS VALIDITY</th><th>STATUS</th></tr>
+        </thead>
+        <tbody id="vehicle-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TOOLS MODULE SCREEN -->
+  <div id="tools-module-screen" class="stlp-container hidden-screen">
+    <h3>Tools & Tackles Module</h3>
+    <button class="stlp-btn-sm" style="background:var(--border-dark); margin-bottom:1rem;" onclick="showScreen('safety-dashboard-screen')">⬅ Back to Dashboard</button>
+    <div class="stlp-table-container">
+      <table class="stlp-table">
+        <thead>
+          <tr><th>EQUIPMENT ID</th><th>NAME</th><th>CAPACITY</th><th>STATUS</th></tr>
+        </thead>
+        <tbody id="tools-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODULE UNDER DEVELOPMENT MODAL -->
+  <div id="under-dev-modal" class="stlp-modal-overlay hidden-screen" onclick="if(event.target===this) closeUnderDevModal()">
+    <div class="stlp-modal-content under-dev-modal-content">
+      <div class="under-dev-icon">🚧</div>
+      <h3>Module Under Development</h3>
+      <p id="under-dev-module-text"></p>
+      <button type="button" class="stlp-btn" onclick="closeUnderDevModal()">Coming Soon</button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT HOIST MODAL -->
+  <div id="hoist-modal" class="stlp-modal-overlay hidden-screen">
+    <div class="stlp-modal-content">
+      <h3 id="modal-title-text">Add New Hoist Record</h3>
+      <form id="hoist-form" onsubmit="saveHoistRecord(event)">
+        <input type="hidden" id="m-editing-id" />
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:1rem;">
+          <div><label>Plant Section*</label><input type="text" id="m-section" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Location*</label><input type="text" id="m-loc" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Equipment Name*</label><input type="text" id="m-name" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Nomenclature*</label><input type="text" id="m-nom" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Due Date*</label><input type="date" id="m-due-date" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Test Date</label><input type="date" id="m-test-date" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Equipment Loc</label><input type="text" id="m-eq-loc" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Hoist Type</label><input type="text" id="m-type" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Make</label><input type="text" id="m-make" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>MFG</label><input type="text" id="m-mfg" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Details</label><input type="text" id="m-details" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Certificate</label><input type="text" id="m-cert" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Capacity</label><input type="text" id="m-cap" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Healthiness Status</label><input type="text" id="m-health" placeholder="OK" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Power Supply Status</label><input type="text" id="m-power" style="width:100%; box-sizing:border-box;" /></div>
+          <div>
+            <label>Running Status</label>
+            <select id="m-running" style="width:100%; box-sizing:border-box; padding:6px;">
+              <option value="Running">Running</option>
+              <option value="Obsolute">Obsolute</option>
+            </select>
+          </div>
+          <div><label>Feeder</label><input type="text" id="m-feeder" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Pendant</label><input type="text" id="m-pendant" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>TPI</label><input type="text" id="m-tpi" placeholder="TPI DONE / PENDING" style="width:100%; box-sizing:border-box;" /></div>
+          <div style="grid-column: 1 / -1;"><label>Remarks</label><input type="text" id="m-remarks" style="width:100%; box-sizing:border-box;" /></div>
+        </div>
+        <div style="text-align:right; margin-top:1rem;">
+          <button type="button" class="stlp-btn" style="background:var(--border-dark);" onclick="closeHoistModal()">Cancel</button>
+          <button type="submit" class="stlp-btn">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT PRESSURE VESSEL MODAL -->
+  <div id="vessel-modal" class="stlp-modal-overlay hidden-screen">
+    <div class="stlp-modal-content">
+      <h3 id="vessel-modal-title-text">Add New Pressure Vessel Record</h3>
+      <form id="vessel-form" onsubmit="saveVesselRecord(event)">
+        <input type="hidden" id="v-editing-id" />
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:1rem;">
+          <div><label>Area*</label><input type="text" id="v-area" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Location*</label><input type="text" id="v-loc" required style="width:100%; box-sizing:border-box;" /></div>
+          <div style="grid-column: 1 / -1;"><label>Name of Vessel (nature of process)*</label><input type="text" id="v-name" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Vessel Serial Number*</label><input type="text" id="v-serial" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Safe Working Pressure (Mfr)</label><input type="text" id="v-swp" placeholder="e.g. 0.8 MPa" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Test Certificate No</label><input type="text" id="v-cert" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Last Hydro Test Date (A)</label><input type="date" id="v-last-hydro" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Present Hydro Test Done (B)</label><input type="date" id="v-present-hydro" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Hydro Test Due Date (C)*</label><input type="date" id="v-hydro-due" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Last Thickness Test Date (D)</label><input type="date" id="v-last-thick" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Thickness Test Due Date*</label><input type="date" id="v-thick-due" required style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Condition</label><input type="text" id="v-condition" placeholder="Good Condition" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Constructed Thickness — Shell</label><input type="text" id="v-con-shell" placeholder="Shell: 5.0mm" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Constructed Thickness — Dish</label><input type="text" id="v-con-dish" placeholder="Dish: 5.5mm" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Min Allowable — Shell (30% red.)</label><input type="text" id="v-min-shell" placeholder="3.5" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Min Allowable — Dish (30% red.)</label><input type="text" id="v-min-dish" placeholder="3.85" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Measured Thickness — Shell (UT)</label><input type="text" id="v-mes-shell" placeholder="Shell: 4.8mm" style="width:100%; box-sizing:border-box;" /></div>
+          <div><label>Measured Thickness — Dish (UT)</label><input type="text" id="v-mes-dish" placeholder="Dish: 5.2mm" style="width:100%; box-sizing:border-box;" /></div>
+          <div style="grid-column: 1 / -1;"><label>Calculated SWP as per Thickness Measurement</label><input type="text" id="v-calc-swp" placeholder="e.g. 0.6 MPa" style="width:100%; box-sizing:border-box;" /></div>
+          <div style="grid-column: 1 / -1;"><label>TPI Observation</label><input type="text" id="v-tpi-obs" style="width:100%; box-sizing:border-box;" /></div>
+        </div>
+        <div style="text-align:right; margin-top:1rem;">
+          <button type="button" class="stlp-btn" style="background:var(--border-dark);" onclick="closeVesselModal()">Cancel</button>
+          <button type="submit" class="stlp-btn">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PORTAL JS SCRIPT -->
+  <script src="safety_app.js"></script>
+</body>
+</html>
