@@ -2320,3 +2320,60 @@ select.form-control option {
   #jfc-module-screen .ppe-hero-search { flex: 1; min-width: 0; }
   #jfc-module-screen .ppe-kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   CROSS-PLATFORM AUTO-FIT — ADDITIVE ONLY
+   Enhances (does not remove) the height rules above so every
+   screen/module/popup fits correctly on iPhone (notch/standalone
+   PWA), Android, and Windows — without touching any existing
+   rule. Browsers that don't support dvh/env() simply keep the
+   original vh values already declared above.
+   ============================================================ */
+
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.stlp-auth-wrapper {
+    min-height: calc(100dvh - 76px - var(--safe-top) - var(--safe-bottom));
+}
+
+.stlp-table-container {
+    max-height: calc(100dvh - 220px - var(--safe-top) - var(--safe-bottom));
+}
+
+.modal-overlay {
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+}
+
+body {
+    padding-top: var(--safe-top);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+}
+
+@media (max-width: 768px) {
+    .stlp-auth-wrapper {
+        min-height: calc(100dvh - 120px - var(--safe-top) - var(--safe-bottom));
+    }
+}
+
+/* Keep desktop/tablet windows (incl. Windows installed app window)
+   from rendering content oversized when the window is narrower
+   than the widest fixed-width tables/cards. */
+@media (min-width: 769px) and (max-width: 1099px) {
+    body {
+        font-size: 0.95rem;
+    }
+}
