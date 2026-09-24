@@ -1452,3 +1452,871 @@ select.form-control option {
   overflow-y: auto;
   position: relative;
 }
+/* ============================================================
+   PPE MODULE — VISUAL REDESIGN (v2)
+   Scoped entirely under #ppe-module-screen / .ppe-v2 so no other
+   module, screen, or global style is affected. Purely presentational —
+   no IDs used by JavaScript are altered here, only decorated.
+   ============================================================ */
+
+#ppe-module-screen.ppe-v2 {
+  --ppe-purple: #7c3aed;
+  --ppe-purple-soft: rgba(124, 58, 237, 0.12);
+  --ppe-blue-soft: rgba(37, 99, 235, 0.12);
+  --ppe-green-soft: rgba(34, 197, 94, 0.14);
+  --ppe-orange-soft: rgba(249, 115, 22, 0.14);
+  --ppe-radius: 16px;
+  color: var(--text-main);
+}
+
+/* ---------- HERO HEADER ---------- */
+#ppe-module-screen .ppe-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #0b1f3f 0%, #123a72 55%, #1d4ed8 100%);
+  border-radius: var(--ppe-radius);
+  padding: 1.6rem 1.8rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 16px 40px rgba(10, 25, 55, 0.35);
+}
+
+#ppe-module-screen .ppe-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#ppe-module-screen .ppe-hero-icon {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+}
+
+#ppe-module-screen .ppe-hero-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+#ppe-module-screen .ppe-hero-subtitle {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+}
+
+#ppe-module-screen .ppe-hero-right {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+#ppe-module-screen .ppe-hero-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  min-width: 260px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+#ppe-module-screen .ppe-hero-search-icon {
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+#ppe-module-screen .ppe-hero-search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: transparent;
+  min-width: 140px;
+}
+
+#ppe-module-screen .ppe-back-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+#ppe-module-screen .ppe-back-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+
+/* ---------- KPI CARDS ---------- */
+#ppe-module-screen .ppe-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+#ppe-module-screen .ppe-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ppe-radius);
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#ppe-module-screen .ppe-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+}
+
+#ppe-module-screen .ppe-kpi-clickable {
+  cursor: pointer;
+}
+
+#ppe-module-screen .ppe-kpi-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+#ppe-module-screen .ppe-kpi-blue .ppe-kpi-icon { background: var(--ppe-blue-soft); }
+#ppe-module-screen .ppe-kpi-green .ppe-kpi-icon { background: var(--ppe-green-soft); }
+#ppe-module-screen .ppe-kpi-orange .ppe-kpi-icon { background: var(--ppe-orange-soft); }
+#ppe-module-screen .ppe-kpi-purple .ppe-kpi-icon { background: var(--ppe-purple-soft); }
+
+#ppe-module-screen .ppe-kpi-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#ppe-module-screen .ppe-kpi-title {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+#ppe-module-screen .ppe-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+#ppe-module-screen .ppe-kpi-cta {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ppe-purple);
+  line-height: 1.3;
+}
+
+#ppe-module-screen .ppe-kpi-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ---------- HISTORY ACCESS CARD ---------- */
+#ppe-module-screen .ppe-history-access-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ppe-radius);
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+#ppe-module-screen .ppe-history-access-card p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0.6rem 0 0;
+}
+
+/* ---------- SECTION HEADINGS ---------- */
+#ppe-module-screen .ppe-section-heading {
+  margin: 0.4rem 0 1rem;
+}
+
+#ppe-module-screen .ppe-section-heading h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+#ppe-module-screen .ppe-section-heading p {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+#ppe-module-screen .ppe-detail-heading {
+  margin-top: 1.8rem;
+}
+
+/* ---------- QUICK ACTION CARDS ---------- */
+#ppe-module-screen .ppe-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.1rem;
+  margin-bottom: 1.6rem;
+}
+
+#ppe-module-screen .ppe-action-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ppe-radius);
+  padding: 1.3rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#ppe-module-screen .ppe-action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.18);
+}
+
+#ppe-module-screen .ppe-action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 0.7rem;
+}
+
+#ppe-module-screen .ppe-icon-blue { background: var(--ppe-blue-soft); }
+#ppe-module-screen .ppe-icon-green { background: var(--ppe-green-soft); }
+#ppe-module-screen .ppe-icon-purple { background: var(--ppe-purple-soft); }
+
+#ppe-module-screen .ppe-action-card h5 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+#ppe-module-screen .ppe-action-card p {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+#ppe-module-screen .ppe-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+/* ---------- MODERN BUTTONS (Quick Actions / Recent / Quick Links) ---------- */
+#ppe-module-screen .ppe-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+#ppe-module-screen .ppe-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+#ppe-module-screen .ppe-btn-primary {
+  background: var(--primary-blue);
+  color: #ffffff;
+}
+
+#ppe-module-screen .ppe-btn-secondary {
+  background: transparent;
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue);
+}
+
+#ppe-module-screen .ppe-btn-export {
+  background: var(--safety-green);
+  color: #ffffff;
+}
+
+#ppe-module-screen .ppe-btn-template {
+  background: var(--ppe-purple-soft);
+  color: var(--ppe-purple);
+  border: 1px solid var(--ppe-purple);
+}
+
+/* ---------- RECENT ISSUES + OVERVIEW + QUICK LINKS ---------- */
+#ppe-module-screen .ppe-main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.2rem;
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+
+#ppe-module-screen .ppe-recent-card,
+#ppe-module-screen .ppe-overview-card,
+#ppe-module-screen .ppe-quicklinks-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ppe-radius);
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+#ppe-module-screen .ppe-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+#ppe-module-screen .ppe-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+#ppe-module-screen .ppe-card-header h4,
+#ppe-module-screen .ppe-overview-card h4,
+#ppe-module-screen .ppe-quicklinks-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+#ppe-module-screen .ppe-view-all-link {
+  color: var(--primary-blue);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#ppe-module-screen .ppe-view-all-link:hover {
+  text-decoration: underline;
+}
+
+#ppe-module-screen .ppe-recent-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+#ppe-module-screen .ppe-table-scroll {
+  overflow-x: auto;
+}
+
+#ppe-module-screen .ppe-modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+#ppe-module-screen .ppe-modern-table thead th {
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#ppe-module-screen .ppe-modern-table tbody td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+#ppe-module-screen .ppe-modern-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+#ppe-module-screen .ppe-item-badge {
+  display: inline-block;
+  background: var(--ppe-blue-soft);
+  color: var(--primary-blue);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin: 2px 3px 2px 0;
+  white-space: nowrap;
+}
+
+/* ---------- PPE ITEMS OVERVIEW (donut chart) ---------- */
+#ppe-module-screen .ppe-items-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+#ppe-module-screen .ppe-items-chart svg {
+  max-width: 100%;
+  height: auto;
+}
+
+#ppe-module-screen .ppe-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+#ppe-module-screen .ppe-chart-legend span.ppe-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+#ppe-module-screen .ppe-chart-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 1.2rem 0;
+}
+
+/* ---------- QUICK LINKS ---------- */
+#ppe-module-screen .ppe-quicklinks-card {
+  display: flex;
+  flex-direction: column;
+}
+
+#ppe-module-screen .ppe-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 9px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.6rem;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#ppe-module-screen .ppe-quicklinks-card h4 + .ppe-link-btn {
+  margin-top: 0.9rem;
+}
+
+#ppe-module-screen .ppe-link-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--primary-blue);
+}
+
+/* ---------- FULL DETAILED PANELS (existing tables, restyled) ---------- */
+#ppe-module-screen .ppe-panel-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--ppe-radius);
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 1100px) {
+  #ppe-module-screen .ppe-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  #ppe-module-screen .ppe-quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  #ppe-module-screen .ppe-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  #ppe-module-screen .ppe-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #ppe-module-screen .ppe-hero-right {
+    width: 100%;
+  }
+  #ppe-module-screen .ppe-hero-search {
+    flex: 1;
+    min-width: 0;
+  }
+  #ppe-module-screen .ppe-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ============================================================
+   J&FC TRACKER — same visual style as PPE Management (v2)
+   Scoped under #jfc-module-screen only.
+   ============================================================ */
+#jfc-module-screen.ppe-v2 {
+  --ppe-purple: #7c3aed;
+  --ppe-purple-soft: rgba(124, 58, 237, 0.12);
+  --ppe-blue-soft: rgba(37, 99, 235, 0.12);
+  --ppe-green-soft: rgba(34, 197, 94, 0.14);
+  --ppe-orange-soft: rgba(249, 115, 22, 0.14);
+  --ppe-radius: 16px;
+  color: var(--text-main);
+}
+#jfc-module-screen .ppe-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #0b1f3f 0%, #123a72 55%, #1d4ed8 100%);
+  border-radius: var(--ppe-radius);
+  padding: 1.6rem 1.8rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 16px 40px rgba(10, 25, 55, 0.35);
+}
+#jfc-module-screen .ppe-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+#jfc-module-screen .ppe-hero-icon {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+}
+#jfc-module-screen .ppe-hero-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+#jfc-module-screen .ppe-hero-subtitle {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+}
+#jfc-module-screen .ppe-hero-right {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+#jfc-module-screen .ppe-hero-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  min-width: 260px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+#jfc-module-screen .ppe-hero-search-icon {
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+#jfc-module-screen .ppe-hero-search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: transparent;
+  min-width: 140px;
+}
+#jfc-module-screen .ppe-back-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+#jfc-module-screen .ppe-back-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+#jfc-module-screen .ppe-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+#jfc-module-screen .ppe-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ppe-radius);
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+#jfc-module-screen .ppe-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+}
+#jfc-module-screen .ppe-kpi-clickable {
+  cursor: pointer;
+}
+#jfc-module-screen .ppe-kpi-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+#jfc-module-screen .ppe-kpi-blue .ppe-kpi-icon { background: var(--ppe-blue-soft); }
+#jfc-module-screen .ppe-kpi-green .ppe-kpi-icon { background: var(--ppe-green-soft); }
+#jfc-module-screen .ppe-kpi-orange .ppe-kpi-icon { background: var(--ppe-orange-soft); }
+#jfc-module-screen .ppe-kpi-purple .ppe-kpi-icon { background: var(--ppe-purple-soft); }
+#jfc-module-screen .ppe-kpi-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#jfc-module-screen .ppe-kpi-title {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+#jfc-module-screen .ppe-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+#jfc-module-screen .ppe-kpi-cta {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ppe-purple);
+  line-height: 1.3;
+}
+#jfc-module-screen .ppe-kpi-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+#jfc-module-screen .ppe-section-heading {
+  margin: 0.4rem 0 1rem;
+}
+#jfc-module-screen .ppe-section-heading h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+#jfc-module-screen .ppe-section-heading p {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+#jfc-module-screen .ppe-detail-heading {
+  margin-top: 1.8rem;
+}
+#jfc-module-screen .ppe-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+#jfc-module-screen .ppe-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+#jfc-module-screen .ppe-btn-primary {
+  background: var(--primary-blue);
+  color: #ffffff;
+}
+#jfc-module-screen .ppe-btn-secondary {
+  background: transparent;
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue);
+}
+#jfc-module-screen .ppe-btn-export {
+  background: var(--safety-green);
+  color: #ffffff;
+}
+#jfc-module-screen .ppe-btn-template {
+  background: var(--ppe-purple-soft);
+  color: var(--ppe-purple);
+  border: 1px solid var(--ppe-purple);
+}
+#jfc-module-screen .ppe-table-scroll {
+  overflow-x: auto;
+}
+#jfc-module-screen .ppe-modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+#jfc-module-screen .ppe-modern-table thead th {
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--border-color);
+}
+#jfc-module-screen .ppe-modern-table tbody td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+#jfc-module-screen .ppe-modern-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+#jfc-module-screen .ppe-panel-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--ppe-radius);
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- J&FC-specific additions ---------- */
+#jfc-module-screen .ppe-btn-danger { background: var(--safety-red, #ef4444); color: #ffffff; }
+#jfc-module-screen .ppe-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+#jfc-module-screen .jfc-filter-grid {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+#jfc-module-screen .jfc-filter-grid select,
+#jfc-module-screen .jfc-filter-grid input[type="date"],
+#jfc-module-screen .jfc-chart-title select {
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+#jfc-module-screen .jfc-filter-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+#jfc-module-screen .jfc-indicator {
+  margin-top: 0.9rem; padding: 0.55rem 0.9rem;
+  border: 1px dashed var(--border-color); border-radius: 10px;
+  font-size: 0.82rem; color: var(--text-muted);
+}
+#jfc-module-screen .jfc-actions {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 1rem;
+}
+#jfc-module-screen .jfc-actions .select-all-top-wrapper { margin: 0 0 0 4px; }
+#jfc-module-screen .jfc-showing { margin-bottom: 0.8rem; color: var(--text-muted); font-size: 0.85rem; }
+
+/* 4 notice-type KPI cards */
+#jfc-module-screen .jfc-kpi { cursor: pointer; user-select: none; border-left: 4px solid var(--jfc-c); }
+#jfc-module-screen .jfc-kpi .ppe-kpi-icon { background: var(--jfc-soft); }
+#jfc-module-screen .jfc-kpi.active { box-shadow: 0 0 0 2px var(--jfc-c), var(--shadow); }
+#jfc-module-screen .jfc-kpi-red    { --jfc-c: #ef4444; --jfc-soft: rgba(239, 68, 68, 0.15); }
+#jfc-module-screen .jfc-kpi-green  { --jfc-c: #22c55e; --jfc-soft: rgba(34, 197, 94, 0.15); }
+#jfc-module-screen .jfc-kpi-yellow { --jfc-c: #eab308; --jfc-soft: rgba(234, 179, 8, 0.18); }
+#jfc-module-screen .jfc-kpi-white  { --jfc-c: #94a3b8; --jfc-soft: rgba(148, 163, 184, 0.22); }
+#jfc-module-screen .jfc-kpi-total  { --jfc-c: #3b82f6; --jfc-soft: rgba(59, 130, 246, 0.15); }
+#jfc-module-screen .ppe-kpi-grid { grid-template-columns: repeat(5, 1fr); }
+
+/* charts */
+#jfc-module-screen .jfc-chart-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.1rem; margin-bottom: 1.6rem;
+}
+#jfc-module-screen .jfc-chart-card { display: flex; flex-direction: column; height: 300px; }
+#jfc-module-screen .jfc-chart-tall { height: 370px; }
+#jfc-module-screen .jfc-chart-wide { grid-column: 1 / -1; }
+#jfc-module-screen .jfc-chart-title {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px; font-size: 0.9rem; color: var(--text-main);
+}
+#jfc-module-screen .jfc-chart-body { flex: 1; min-height: 0; position: relative; }
+
+/* table */
+#jfc-module-screen .ppe-table-scroll { max-height: 72vh; overflow: auto; }
+#jfc-module-screen .ppe-modern-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg-card); white-space: nowrap; }
+#jfc-module-screen .ppe-modern-table tbody td { vertical-align: top; }
+#jfc-module-screen .ppe-modern-table td.jfc-desc-cell { min-width: 280px; white-space: normal; }
+.jfc-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; border: 1px solid transparent;
+}
+.jfc-badge.jfc-red    { background: #dc2626; color: #ffffff; }
+.jfc-badge.jfc-green  { background: #16a34a; color: #ffffff; }
+.jfc-badge.jfc-yellow { background: #eab308; color: #1f2937; }
+.jfc-badge.jfc-white  { background: #f8fafc; color: #1f2937; border-color: #cbd5e1; }
+
+@media (max-width: 1100px) {
+  #jfc-module-screen .ppe-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  #jfc-module-screen .ppe-hero { flex-direction: column; align-items: flex-start; }
+  #jfc-module-screen .ppe-hero-right { width: 100%; }
+  #jfc-module-screen .ppe-hero-search { flex: 1; min-width: 0; }
+  #jfc-module-screen .ppe-kpi-grid { grid-template-columns: 1fr; }
+}
