@@ -49,7 +49,7 @@ let userState = {
 
 let selectedHoistIds = new Set();
 let selectedInstrumentIds = new Set();
-let currentSortColumn = null;
+let currentSortColumn = 'Sr. No.';
 let currentSortOrder = 'asc';
 let currentInstrumentSortColumn = null;
 let currentInstrumentSortOrder = 'asc';
