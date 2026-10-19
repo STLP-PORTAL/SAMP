@@ -146,9 +146,9 @@ function mapRowFromSupabase(item) {
     "Test date": item.test_date || item["Test date"] || '',
     "Due Date": item.due_date || item["Due Date"] || '',
     "Capacity": item.capacity || item["Capacity"] || '',
-    "Healthiness Status": item.healthiness_status || item["Healthiness Status"] || 'OK',
+    "Healthiness Status": item.healthiness_status || item["Healthiness Status"] || '',
     "Power Supply Status": item.power_supply_status || item["Power Supply Status"] || '',
-    "Running Status": item.running_status || item["Running Status"] || 'Running',
+    "Running Status": item.running_status || item["Running Status"] || '',
     "Feeder": item.feeder || item["Feeder"] || '',
     "Pendant": item.pendant || item["Pendant"] || '',
     "Remarks": item.remarks || item["Remarks"] || '',
@@ -159,7 +159,7 @@ function mapRowFromSupabase(item) {
 }
 
 function mapRowToSupabase(hoist) {
-  const nomClean = String(hoist["Nomenclature"] || '').trim().toUpperCase();
+  const nomClean = String(hoist["Nomenclature"] ?? '');
   return {
     sr_no: String(hoist["Sr. No."] || ''),
     plant_section: String(hoist["Plant Section"] || ''),
@@ -175,9 +175,9 @@ function mapRowToSupabase(hoist) {
     test_date: String(hoist["Test date"] || ''),
     due_date: String(hoist["Due Date"] || ''),
     capacity: String(hoist["Capacity"] || ''),
-    healthiness_status: String(hoist["Healthiness Status"] || 'OK'),
+    healthiness_status: String(hoist["Healthiness Status"] ?? ''),
     power_supply_status: String(hoist["Power Supply Status"] || ''),
-    running_status: String(hoist["Running Status"] || 'Running'),
+    running_status: String(hoist["Running Status"] ?? ''),
     feeder: String(hoist["Feeder"] || ''),
     pendant: String(hoist["Pendant"] || ''),
     remarks: String(hoist["Remarks"] || ''),
@@ -1369,13 +1369,10 @@ async function saveHoistRecord(e) {
   try {
 
     if (editingId) {
-      const targetRecord = dbData.hoists.find(h => String(h.id) === String(editingId));
-      const targetNom = targetRecord ? String(targetRecord["Nomenclature"]).trim().toUpperCase() : supabaseRow.nomenclature;
-
       const { error } = await client
         .from('hoist_records')
         .update(supabaseRow)
-        .eq('nomenclature', targetNom);
+        .eq('id', editingId);
 
       if (error) {
         alert('❌ Supabase Update Error: ' + error.message);
@@ -1497,55 +1494,59 @@ function normalizeImportHeader(rawHeader) {
 function formatExcelDate(dateVal) {
   if (dateVal === null || dateVal === undefined || dateVal === '') return '';
 
+  // Real Excel date (serial number) -> dd-mm-yyyy, no timezone involved.
   if (typeof dateVal === 'number') {
     try {
       const parsed = XLSX.SSF.parse_date_code(dateVal);
       if (parsed) {
         const d = String(parsed.d).padStart(2, '0');
         const m = String(parsed.m).padStart(2, '0');
-        const y = parsed.y;
-        return `${d}-${m}-${y}`;
+        return `${d}-${m}-${parsed.y}`;
       }
     } catch (err) {}
   }
 
-  if (dateVal instanceof Date) {
-    if (!isNaN(dateVal.getTime())) {
-      const d = String(dateVal.getDate()).padStart(2, '0');
-      const m = String(dateVal.getMonth() + 1).padStart(2, '0');
-      const y = dateVal.getFullYear();
-      return `${d}-${m}-${y}`;
-    }
+  // Text typed in the cell: keep EXACTLY as written, no reformatting.
+  return String(dateVal);
+}
+
+/* Read one worksheet cell exactly as Excel shows it (no trimming, no defaults). */
+function readCellExact(cell) {
+  if (!cell || cell.v === undefined || cell.v === null) return '';
+  if (cell.t === 'n') {
+    const fmt = String(cell.z || '');
+    if (fmt && XLSX.SSF.is_date(fmt)) return formatExcelDate(cell.v);
+    return cell.w !== undefined ? String(cell.w) : String(cell.v);
   }
-
-  const strVal = String(dateVal).trim();
-  if (!strVal || strVal === '-' || strVal.toLowerCase() === 'n/a') return '';
-
-  const ddmmyyyyMatch = strVal.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (ddmmyyyyMatch) {
-    const day = String(ddmmyyyyMatch[1]).padStart(2, '0');
-    const month = String(ddmmyyyyMatch[2]).padStart(2, '0');
-    const year = ddmmyyyyMatch[3];
-    return `${day}-${month}-${year}`;
+  if (cell.t === 'd') {
+    return cell.w !== undefined ? String(cell.w) : String(cell.v);
   }
+  if (cell.t === 'b') return cell.v ? 'TRUE' : 'FALSE';
+  return String(cell.v);
+}
 
-  const yyyymmddMatch = strVal.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if (yyyymmddMatch) {
-    const year = yyyymmddMatch[1];
-    const month = String(yyyymmddMatch[2]).padStart(2, '0');
-    const day = String(yyyymmddMatch[3]).padStart(2, '0');
-    return `${day}-${month}-${year}`;
+/* Worksheet -> array of {header: exactText}. First row = headers. Blank rows skipped. */
+function sheetToExactRows(ws) {
+  if (!ws || !ws['!ref']) return [];
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const headers = {};
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const h = ws[XLSX.utils.encode_cell({ r: range.s.r, c: c })];
+    const name = h ? String(h.v === undefined ? '' : h.v).trim() : '';
+    if (name && !Object.values(headers).includes(name)) headers[c] = name;
   }
-
-  const dateObj = new Date(strVal);
-  if (!isNaN(dateObj.getTime())) {
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const year = dateObj.getFullYear();
-    return `${day}-${month}-${year}`;
+  const rows = [];
+  for (let r = range.s.r + 1; r <= range.e.r; r++) {
+    const obj = {};
+    let any = false;
+    Object.keys(headers).forEach(function(c) {
+      const val = readCellExact(ws[XLSX.utils.encode_cell({ r: r, c: Number(c) })]);
+      obj[headers[c]] = val;
+      if (val !== '') any = true;
+    });
+    if (any) rows.push(obj);
   }
-
-  return strVal;
+  return rows;
 }
 
 function handleHoistExcelImport(e) {
@@ -1570,7 +1571,7 @@ function handleHoistExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true, cellText: true });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -1579,7 +1580,7 @@ function handleHoistExcelImport(e) {
 
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: true });
+      const rawRows = sheetToExactRows(worksheet);
 
       if (!rawRows || rawRows.length === 0) {
         alert('❌ No data rows found in Excel sheet.');
@@ -1592,7 +1593,7 @@ function handleHoistExcelImport(e) {
         return;
       }
 
-      const existingNomSet = new Set(dbData.hoists.map(h => String(h["Nomenclature"]).trim().toUpperCase()));
+      const existingNomSet = new Set(dbData.hoists.map(h => String(h["Nomenclature"])));
 
       let autoGeneratedCount = 0;
       let newRecordsCount = 0;
@@ -1603,23 +1604,37 @@ function handleHoistExcelImport(e) {
 
       rawRows.forEach(function(row, index) {
         const mappedRecord = {};
+        const exactNames = ['Sr. No.','Plant Section','Location','Equipment Name','Equipment Location','Hoist Type','Nomenclature','Make','MFG','Details','Certificate','Test date','Due Date','Capacity','Healthiness Status','Power Supply Status','Running Status','Feeder','Pendant','Remarks','Expiry Reminder','Expired','TPI'];
+        const exactClean = {};
+        exactNames.forEach(function(n) { exactClean[n.toLowerCase().replace(/[^a-z0-9]/g, '')] = n; });
+        const usedHeaders = new Set();
+        // Pass 1: header text matches a field name exactly (ignoring case/spaces/dots)
         Object.keys(row).forEach(function(rawKey) {
+          const field = exactClean[String(rawKey).toLowerCase().replace(/[^a-z0-9]/g, '')];
+          if (field && !(field in mappedRecord)) {
+            mappedRecord[field] = row[rawKey];
+            usedHeaders.add(rawKey);
+          }
+        });
+        // Pass 2: fuzzy guess only for headers not already used and fields not already filled
+        Object.keys(row).forEach(function(rawKey) {
+          if (usedHeaders.has(rawKey)) return;
           const normKey = normalizeImportHeader(rawKey);
-          mappedRecord[normKey] = row[rawKey];
+          if (!(normKey in mappedRecord)) mappedRecord[normKey] = row[rawKey];
         });
 
-        let rawNom = String(mappedRecord["Nomenclature"] || '').trim();
+        let rawNom = String(mappedRecord["Nomenclature"] ?? '');
 
-        if (!rawNom) {
+        if (!rawNom.trim()) {
           rawNom = 'TSPL/HOIST-AUTO-' + (index + 1) + '-' + Date.now().toString().slice(-4);
           autoGeneratedCount++;
         }
 
-        let nomKey = rawNom.toUpperCase();
+        let nomKey = rawNom;
 
         if (processedInFile.has(nomKey)) {
           rawNom = rawNom + '-DUP-' + (index + 1);
-          nomKey = rawNom.toUpperCase();
+          nomKey = rawNom;
         }
         processedInFile.add(nomKey);
 
@@ -1645,30 +1660,31 @@ function handleHoistExcelImport(e) {
           }
         }
 
+        const ex = function(k) { return mappedRecord[k] === undefined || mappedRecord[k] === null ? '' : String(mappedRecord[k]); };
         const hoistObj = {
-          "Sr. No.": String(mappedRecord["Sr. No."] || '').trim() || String(index + 1),
-          "Plant Section": String(mappedRecord["Plant Section"] || '').trim() || 'CHP',
-          "Location": String(mappedRecord["Location"] || '').trim() || 'Main Plant',
-          "Equipment Name": String(mappedRecord["Equipment Name"] || '').trim() || 'Hoist Crane',
-          "Equipment Location": String(mappedRecord["Equipment Location"] || '').trim(),
-          "Hoist Type": String(mappedRecord["Hoist Type"] || '').trim() || 'Mono Rail',
+          "Sr. No.": ex("Sr. No."),
+          "Plant Section": ex("Plant Section"),
+          "Location": ex("Location"),
+          "Equipment Name": ex("Equipment Name"),
+          "Equipment Location": ex("Equipment Location"),
+          "Hoist Type": ex("Hoist Type"),
           "Nomenclature": rawNom,
-          "Make": String(mappedRecord["Make"] || '').trim(),
-          "MFG": String(mappedRecord["MFG"] || '').trim(),
-          "Details": String(mappedRecord["Details"] || '').trim(),
-          "Certificate": String(mappedRecord["Certificate"] || '').trim(),
+          "Make": ex("Make"),
+          "MFG": ex("MFG"),
+          "Details": ex("Details"),
+          "Certificate": ex("Certificate"),
           "Test date": testDate,
           "Due Date": dueDate,
-          "Capacity": String(mappedRecord["Capacity"] || '').trim(),
-          "Healthiness Status": String(mappedRecord["Healthiness Status"] || '').trim() || 'OK',
-          "Power Supply Status": String(mappedRecord["Power Supply Status"] || '').trim(),
-          "Running Status": String(mappedRecord["Running Status"] || '').trim() || 'Running',
-          "Feeder": String(mappedRecord["Feeder"] || '').trim(),
-          "Pendant": String(mappedRecord["Pendant"] || '').trim(),
-          "Remarks": String(mappedRecord["Remarks"] || '').trim(),
-          "Expiry Reminder": expiryReminder,
-          "Expired": expired,
-          "TPI": String(mappedRecord["TPI"] || '').trim()
+          "Capacity": ex("Capacity"),
+          "Healthiness Status": ex("Healthiness Status"),
+          "Power Supply Status": ex("Power Supply Status"),
+          "Running Status": ex("Running Status"),
+          "Feeder": ex("Feeder"),
+          "Pendant": ex("Pendant"),
+          "Remarks": ex("Remarks"),
+          "Expiry Reminder": ex("Expiry Reminder") !== '' ? ex("Expiry Reminder") : expiryReminder,
+          "Expired": ex("Expired") !== '' ? ex("Expired") : expired,
+          "TPI": ex("TPI")
         };
 
         recordsToUpsert.push(mapRowToSupabase(hoistObj));
@@ -2882,7 +2898,7 @@ function handleVesselExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -4708,7 +4724,7 @@ function handlePPEEmployeeExcelImport(e) {
   reader.onload = async function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -4903,7 +4919,7 @@ function handlePPERecordsExcelImport(e) {
   reader.onload = async function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -5844,7 +5860,7 @@ function handleInstrumentExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
