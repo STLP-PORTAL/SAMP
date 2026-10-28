@@ -4179,6 +4179,14 @@ async function submitBulkIssue() {
   const issueDateDMY = ppeFormatToDMY(rawIssueDate);
   const remarks = document.getElementById('bi-remarks').value.trim();
 
+  // FIX: submitBulkIssue used getVal() but never defined it locally
+  // (every other save function defines it). Without this, ticking any
+  // PPE item threw a silent error and the insert never ran.
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+
   const itemValues = {};
   let anyItemTicked = false;
   PPE_ISSUE_ITEM_FIELDS.forEach(function(fieldDef) {
