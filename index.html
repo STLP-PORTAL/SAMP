@@ -3070,8 +3070,25 @@
       <div class="ppe-mbody">
 
       <div style="margin-bottom:1rem;">
+        <label>Select employees by</label>
+        <select id="bi-mode" onchange="setBulkIssueMode()" style="width:100%; box-sizing:border-box;">
+          <option value="dept">Department</option>
+          <option value="gp">Gate Pass No. (one by one)</option>
+        </select>
+      </div>
+
+      <div id="bi-dept-wrap" style="margin-bottom:1rem;">
         <label>Department</label>
         <select id="bi-department" onchange="renderBulkIssueEmployeeList()" style="width:100%; box-sizing:border-box;"></select>
+      </div>
+
+      <div id="bi-gp-wrap" style="margin-bottom:1rem; display:none;">
+        <label>Gate Pass No.</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="bi-gatepass" placeholder="Gate Pass No. likho" style="flex:1; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkIssueEmployeeByGatePass();}" />
+          <button type="button" class="stlp-btn" onclick="addBulkIssueEmployeeByGatePass()">Add</button>
+        </div>
+        <p id="bi-gatepass-msg" style="margin:6px 0 0; color:var(--text-muted);">GP likh ke Add dabbo, phir agla GP likho. Sirf Employee Master vich maujood GP add hovega.</p>
       </div>
 
       <div style="margin-bottom:1rem;">

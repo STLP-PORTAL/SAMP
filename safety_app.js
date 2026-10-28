@@ -3940,11 +3940,27 @@ function closePPEIssueModal() {
    Add/Edit PPE Issue modal.
    ------------------------------------------------------------ */
 
+/* Bulk Issue — Gate Pass mode state (ADDITIVE ONLY).
+   Dept mode is untouched. bulkGPSelected holds gate passes added
+   one by one in GP mode; submitBulkIssue() is unchanged and reads
+   the same .bi-emp-chk checkboxes in both modes. */
+let bulkGPSelected = [];
+
 function openBulkIssueModal() {
   if (!userState.isAdmin) {
     alert('❌ Admin access required.');
     return;
   }
+
+  bulkGPSelected = [];
+  const modeSel = document.getElementById('bi-mode');
+  if (modeSel) modeSel.value = 'dept';
+  const deptWrap = document.getElementById('bi-dept-wrap');
+  const gpWrap = document.getElementById('bi-gp-wrap');
+  if (deptWrap) deptWrap.style.display = '';
+  if (gpWrap) gpWrap.style.display = 'none';
+  const gpInput = document.getElementById('bi-gatepass');
+  if (gpInput) gpInput.value = '';
 
   const deptSel = document.getElementById('bi-department');
   if (deptSel) {
@@ -3977,8 +3993,11 @@ function closeBulkIssueModal() {
 
 function renderBulkIssueEmployeeList() {
   const listEl = document.getElementById('bi-employee-list');
+  if (!listEl) return;
+  const modeSel = document.getElementById('bi-mode');
+  if (modeSel && modeSel.value === 'gp') { renderBulkGPEmployeeList(); return; }
   const deptSel = document.getElementById('bi-department');
-  if (!listEl || !deptSel) return;
+  if (!deptSel) return;
 
   const dept = deptSel.value;
   const emps = ppeEmployeeData.filter(e => String(e["Department"] || '').trim() === dept);
@@ -4001,6 +4020,72 @@ function renderBulkIssueEmployeeList() {
     }).join('');
 
   updateBulkSubmitCount();
+}
+
+function setBulkIssueMode() {
+  const modeSel = document.getElementById('bi-mode');
+  const deptWrap = document.getElementById('bi-dept-wrap');
+  const gpWrap = document.getElementById('bi-gp-wrap');
+  const isGP = !!(modeSel && modeSel.value === 'gp');
+  if (deptWrap) deptWrap.style.display = isGP ? 'none' : '';
+  if (gpWrap) gpWrap.style.display = isGP ? '' : 'none';
+  renderBulkIssueEmployeeList();
+  if (isGP) {
+    const gpInput = document.getElementById('bi-gatepass');
+    if (gpInput) gpInput.focus();
+  }
+}
+
+function renderBulkGPEmployeeList() {
+  const listEl = document.getElementById('bi-employee-list');
+  if (!listEl) return;
+  const employeeMap = new Map(ppeEmployeeData.map(function(emp) { return [String(emp["Gate Pass No."]).trim(), emp]; }));
+  if (bulkGPSelected.length === 0) {
+    listEl.innerHTML = '<p style="color:var(--text-muted); margin:0;">Gate Pass No. likh ke Add dabbo — bande ik-ik karke ethe add hon ge.</p>';
+    updateBulkSubmitCount();
+    return;
+  }
+  listEl.innerHTML =
+    '<label style="display:flex; align-items:center; gap:8px; padding:4px 0; font-weight:600;">' +
+      '<input type="checkbox" id="bi-select-all" checked onchange="toggleBulkAllEmployees(this)" /> Select All (' + bulkGPSelected.length + ')' +
+    '</label>' +
+    bulkGPSelected.map(function(gp) {
+      const emp = employeeMap.get(gp);
+      const label = emp ? (gp + ' — ' + emp["Employee Name"]) : gp;
+      return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0;">' +
+        '<input type="checkbox" class="bi-emp-chk" checked onchange="updateBulkSubmitCount()" value="' + escapeHTML(gp) + '" /> ' +
+        '<span>' + escapeHTML(label) + '</span>' +
+        ' <button type="button" class="stlp-btn-sm" style="margin-left:auto;" onclick="removeBulkGPEmployee(\'' + escapeHTML(gp) + '\')">✕</button>' +
+      '</div>';
+    }).join('');
+  updateBulkSubmitCount();
+}
+
+function addBulkIssueEmployeeByGatePass() {
+  const gpInput = document.getElementById('bi-gatepass');
+  const msgEl = document.getElementById('bi-gatepass-msg');
+  if (!gpInput) return;
+  const gp = gpInput.value.trim();
+  if (!gp) { if (msgEl) msgEl.textContent = 'Pehla Gate Pass No. likho.'; gpInput.focus(); return; }
+  if (bulkGPSelected.indexOf(gp) !== -1) {
+    if (msgEl) msgEl.textContent = 'Gate Pass ' + gp + ' pehla ton add hai.';
+    gpInput.value = ''; gpInput.focus(); return;
+  }
+  const emp = ppeEmployeeData.find(function(e) { return String(e["Gate Pass No."]).trim() === gp; });
+  if (!emp) {
+    if (msgEl) msgEl.textContent = 'Gate Pass ' + gp + ' Employee Master vich nahi hai — pehla Master vich add karo, phir ethe add hovega.';
+    gpInput.focus(); return;
+  }
+  bulkGPSelected.push(gp);
+  gpInput.value = '';
+  if (msgEl) msgEl.textContent = 'Added: ' + gp + ' — ' + emp["Employee Name"] + '. Agla GP likho.';
+  renderBulkGPEmployeeList();
+  gpInput.focus();
+}
+
+function removeBulkGPEmployee(gp) {
+  bulkGPSelected = bulkGPSelected.filter(function(g) { return g !== gp; });
+  renderBulkGPEmployeeList();
 }
 
 function toggleBulkAllEmployees(master) {
