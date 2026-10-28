@@ -3085,10 +3085,11 @@
       <div id="bi-gp-wrap" style="margin-bottom:1rem; display:none;">
         <label>Gate Pass No.</label>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="bi-gatepass" placeholder="Gate Pass No. likho" style="flex:1; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkIssueEmployeeByGatePass();}" />
+          <input type="text" id="bi-gatepass" placeholder="Gate Pass No. ya naam likh ke search karo" style="flex:1; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkIssueEmployeeByGatePass();}" oninput="renderBulkGPSuggestions(this.value)" onfocus="renderBulkGPSuggestions(this.value)" />
           <button type="button" class="stlp-btn" onclick="addBulkIssueEmployeeByGatePass()">Add</button>
         </div>
-        <p id="bi-gatepass-msg" style="margin:6px 0 0; color:var(--text-muted);">GP likh ke Add dabbo, phir agla GP likho. Sirf Employee Master vich maujood GP add hovega.</p>
+        <div id="bi-gp-suggestions" style="display:none; margin-top:6px; border:1px solid var(--border, #ddd); border-radius:8px; max-height:180px; overflow:auto;"></div>
+        <p id="bi-gatepass-msg" style="margin:6px 0 0; color:var(--text-muted);">GP ya naam likho — matching bande niche aunge, click karke add karo. Sirf Employee Master vich maujood GP add hovega.</p>
       </div>
 
       <div style="margin-bottom:1rem;">

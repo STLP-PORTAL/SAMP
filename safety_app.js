@@ -3961,6 +3961,8 @@ function openBulkIssueModal() {
   if (gpWrap) gpWrap.style.display = 'none';
   const gpInput = document.getElementById('bi-gatepass');
   if (gpInput) gpInput.value = '';
+  const sugg = document.getElementById('bi-gp-suggestions');
+  if (sugg) { sugg.innerHTML = ''; sugg.style.display = 'none'; }
 
   const deptSel = document.getElementById('bi-department');
   if (deptSel) {
@@ -4029,6 +4031,8 @@ function setBulkIssueMode() {
   const isGP = !!(modeSel && modeSel.value === 'gp');
   if (deptWrap) deptWrap.style.display = isGP ? 'none' : '';
   if (gpWrap) gpWrap.style.display = isGP ? '' : 'none';
+  const sugg2 = document.getElementById('bi-gp-suggestions');
+  if (sugg2) { sugg2.innerHTML = ''; sugg2.style.display = 'none'; }
   renderBulkIssueEmployeeList();
   if (isGP) {
     const gpInput = document.getElementById('bi-gatepass');
@@ -4061,11 +4065,13 @@ function renderBulkGPEmployeeList() {
   updateBulkSubmitCount();
 }
 
-function addBulkIssueEmployeeByGatePass() {
+function addBulkIssueEmployeeByGatePass(gpOverride) {
   const gpInput = document.getElementById('bi-gatepass');
   const msgEl = document.getElementById('bi-gatepass-msg');
-  if (!gpInput) return;
-  const gp = gpInput.value.trim();
+  if (!gpInput && !gpOverride) return;
+  const gp = gpOverride ? String(gpOverride).trim() : gpInput.value.trim();
+  const sugg = document.getElementById('bi-gp-suggestions');
+  if (sugg) { sugg.innerHTML = ''; sugg.style.display = 'none'; }
   if (!gp) { if (msgEl) msgEl.textContent = 'Pehla Gate Pass No. likho.'; gpInput.focus(); return; }
   if (bulkGPSelected.indexOf(gp) !== -1) {
     if (msgEl) msgEl.textContent = 'Gate Pass ' + gp + ' pehla ton add hai.';
@@ -4081,6 +4087,38 @@ function addBulkIssueEmployeeByGatePass() {
   if (msgEl) msgEl.textContent = 'Added: ' + gp + ' — ' + emp["Employee Name"] + '. Agla GP likho.';
   renderBulkGPEmployeeList();
   gpInput.focus();
+}
+
+function renderBulkGPSuggestions(query) {
+  const sugg = document.getElementById('bi-gp-suggestions');
+  if (!sugg) return;
+  const modeSel = document.getElementById('bi-mode');
+  if (!modeSel || modeSel.value !== 'gp') { sugg.innerHTML = ''; sugg.style.display = 'none'; return; }
+  const q = String(query || '').trim().toLowerCase();
+  if (q.length < 2) { sugg.innerHTML = ''; sugg.style.display = 'none'; return; }
+  const matches = ppeEmployeeData.filter(function(e) {
+    const gp = String(e["Gate Pass No."] || '').trim();
+    if (!gp || bulkGPSelected.indexOf(gp) !== -1) return false;
+    const name = String(e["Employee Name"] || '').toLowerCase();
+    return gp.toLowerCase().indexOf(q) !== -1 || name.indexOf(q) !== -1;
+  }).slice(0, 8);
+  if (matches.length === 0) {
+    sugg.innerHTML = '<div style="padding:8px; color:var(--text-muted);">Koi match nahi milya.</div>';
+    sugg.style.display = '';
+    return;
+  }
+  sugg.innerHTML = matches.map(function(e) {
+    const gp = String(e["Gate Pass No."]).trim();
+    return '<button type="button" data-gp="' + escapeHTML(gp) + '" onclick="addBulkIssueEmployeeFromSuggestion(this)" style="display:block; width:100%; text-align:left; padding:8px; background:transparent; border:0; border-bottom:1px solid var(--border, #eee); cursor:pointer;">' +
+      escapeHTML(gp) + ' — ' + escapeHTML(e["Employee Name"]) + (e["Department"] ? ' (' + escapeHTML(e["Department"]) + ')' : '') +
+    '</button>';
+  }).join('');
+  sugg.style.display = '';
+}
+
+function addBulkIssueEmployeeFromSuggestion(btn) {
+  const gp = btn ? btn.getAttribute('data-gp') : '';
+  if (gp) addBulkIssueEmployeeByGatePass(gp);
 }
 
 function removeBulkGPEmployee(gp) {
