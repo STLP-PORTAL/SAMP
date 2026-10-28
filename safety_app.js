@@ -49,7 +49,7 @@ let userState = {
 
 let selectedHoistIds = new Set();
 let selectedInstrumentIds = new Set();
-let currentSortColumn = 'Sr. No.';
+let currentSortColumn = null;
 let currentSortOrder = 'asc';
 let currentInstrumentSortColumn = null;
 let currentInstrumentSortOrder = 'asc';
@@ -146,9 +146,9 @@ function mapRowFromSupabase(item) {
     "Test date": item.test_date || item["Test date"] || '',
     "Due Date": item.due_date || item["Due Date"] || '',
     "Capacity": item.capacity || item["Capacity"] || '',
-    "Healthiness Status": item.healthiness_status || item["Healthiness Status"] || '',
+    "Healthiness Status": item.healthiness_status || item["Healthiness Status"] || 'OK',
     "Power Supply Status": item.power_supply_status || item["Power Supply Status"] || '',
-    "Running Status": item.running_status || item["Running Status"] || '',
+    "Running Status": item.running_status || item["Running Status"] || 'Running',
     "Feeder": item.feeder || item["Feeder"] || '',
     "Pendant": item.pendant || item["Pendant"] || '',
     "Remarks": item.remarks || item["Remarks"] || '',
@@ -159,7 +159,7 @@ function mapRowFromSupabase(item) {
 }
 
 function mapRowToSupabase(hoist) {
-  const nomClean = String(hoist["Nomenclature"] ?? '');
+  const nomClean = String(hoist["Nomenclature"] || '').trim().toUpperCase();
   return {
     sr_no: String(hoist["Sr. No."] || ''),
     plant_section: String(hoist["Plant Section"] || ''),
@@ -175,9 +175,9 @@ function mapRowToSupabase(hoist) {
     test_date: String(hoist["Test date"] || ''),
     due_date: String(hoist["Due Date"] || ''),
     capacity: String(hoist["Capacity"] || ''),
-    healthiness_status: String(hoist["Healthiness Status"] ?? ''),
+    healthiness_status: String(hoist["Healthiness Status"] || 'OK'),
     power_supply_status: String(hoist["Power Supply Status"] || ''),
-    running_status: String(hoist["Running Status"] ?? ''),
+    running_status: String(hoist["Running Status"] || 'Running'),
     feeder: String(hoist["Feeder"] || ''),
     pendant: String(hoist["Pendant"] || ''),
     remarks: String(hoist["Remarks"] || ''),
@@ -459,36 +459,50 @@ function updateHeader() {
    ADMIN LOGIN (CORRECTED SCREEN TRANSITION)
    ============================================================ */
 
-function handleAdminLogin(e) {
+async function handleAdminLogin(e) {
 
   if (e && typeof e.preventDefault === 'function') {
     e.preventDefault();
   }
 
-  const usernameElement = document.getElementById('login-username');
+  const emailElement = document.getElementById('login-username');
   const passwordElement = document.getElementById('login-password');
 
-  if (!usernameElement || !passwordElement) {
+  if (!emailElement || !passwordElement) {
     alert('Login fields not found.');
     return;
   }
 
-  const username = usernameElement.value.trim();
+  const email = emailElement.value.trim();
   const password = passwordElement.value;
 
-  const ADMIN_USERNAME = 'admin';
-  const ADMIN_PASSWORD = 'admin123';
+  if (!email || !password) {
+    alert('Please enter your admin email and password.');
+    return;
+  }
 
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+  const client = initSupabase();
+  if (!client) {
+    alert('Backend not reachable. Check your internet connection and reload.');
+    return;
+  }
+
+  try {
+    const { error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    // Any authenticated account is an admin. Accounts are created ONLY by
+    // the portal owner in the Supabase dashboard (public sign-ups disabled),
+    // so there is no hardcoded password anywhere in this file anymore.
     userState.isLoggedIn = true;
     userState.isAdmin = true;
 
+    passwordElement.value = '';
     showScreen('safety-dashboard-screen');
-  } else {
+  } catch (err) {
     userState.isLoggedIn = false;
     userState.isAdmin = false;
-
-    alert('❌ Invalid Admin Username or Password');
+    alert('❌ Invalid Email or Password');
   }
 
 }
@@ -512,7 +526,12 @@ function handleGuestAccess() {
    LOGOUT
    ============================================================ */
 
-function handleLogout() {
+async function handleLogout() {
+
+  try {
+    const client = initSupabase();
+    if (client) await client.auth.signOut();
+  } catch (e) { /* ignore sign-out errors */ }
 
   userState.isLoggedIn = false;
   userState.isAdmin = false;
@@ -1369,10 +1388,13 @@ async function saveHoistRecord(e) {
   try {
 
     if (editingId) {
+      const targetRecord = dbData.hoists.find(h => String(h.id) === String(editingId));
+      const targetNom = targetRecord ? String(targetRecord["Nomenclature"]).trim().toUpperCase() : supabaseRow.nomenclature;
+
       const { error } = await client
         .from('hoist_records')
         .update(supabaseRow)
-        .eq('id', editingId);
+        .eq('nomenclature', targetNom);
 
       if (error) {
         alert('❌ Supabase Update Error: ' + error.message);
@@ -1494,59 +1516,55 @@ function normalizeImportHeader(rawHeader) {
 function formatExcelDate(dateVal) {
   if (dateVal === null || dateVal === undefined || dateVal === '') return '';
 
-  // Real Excel date (serial number) -> dd-mm-yyyy, no timezone involved.
   if (typeof dateVal === 'number') {
     try {
       const parsed = XLSX.SSF.parse_date_code(dateVal);
       if (parsed) {
         const d = String(parsed.d).padStart(2, '0');
         const m = String(parsed.m).padStart(2, '0');
-        return `${d}-${m}-${parsed.y}`;
+        const y = parsed.y;
+        return `${d}-${m}-${y}`;
       }
     } catch (err) {}
   }
 
-  // Text typed in the cell: keep EXACTLY as written, no reformatting.
-  return String(dateVal);
-}
+  if (dateVal instanceof Date) {
+    if (!isNaN(dateVal.getTime())) {
+      const d = String(dateVal.getDate()).padStart(2, '0');
+      const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+      const y = dateVal.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+  }
 
-/* Read one worksheet cell exactly as Excel shows it (no trimming, no defaults). */
-function readCellExact(cell) {
-  if (!cell || cell.v === undefined || cell.v === null) return '';
-  if (cell.t === 'n') {
-    const fmt = String(cell.z || '');
-    if (fmt && XLSX.SSF.is_date(fmt)) return formatExcelDate(cell.v);
-    return cell.w !== undefined ? String(cell.w) : String(cell.v);
-  }
-  if (cell.t === 'd') {
-    return cell.w !== undefined ? String(cell.w) : String(cell.v);
-  }
-  if (cell.t === 'b') return cell.v ? 'TRUE' : 'FALSE';
-  return String(cell.v);
-}
+  const strVal = String(dateVal).trim();
+  if (!strVal || strVal === '-' || strVal.toLowerCase() === 'n/a') return '';
 
-/* Worksheet -> array of {header: exactText}. First row = headers. Blank rows skipped. */
-function sheetToExactRows(ws) {
-  if (!ws || !ws['!ref']) return [];
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  const headers = {};
-  for (let c = range.s.c; c <= range.e.c; c++) {
-    const h = ws[XLSX.utils.encode_cell({ r: range.s.r, c: c })];
-    const name = h ? String(h.v === undefined ? '' : h.v).trim() : '';
-    if (name && !Object.values(headers).includes(name)) headers[c] = name;
+  const ddmmyyyyMatch = strVal.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const day = String(ddmmyyyyMatch[1]).padStart(2, '0');
+    const month = String(ddmmyyyyMatch[2]).padStart(2, '0');
+    const year = ddmmyyyyMatch[3];
+    return `${day}-${month}-${year}`;
   }
-  const rows = [];
-  for (let r = range.s.r + 1; r <= range.e.r; r++) {
-    const obj = {};
-    let any = false;
-    Object.keys(headers).forEach(function(c) {
-      const val = readCellExact(ws[XLSX.utils.encode_cell({ r: r, c: Number(c) })]);
-      obj[headers[c]] = val;
-      if (val !== '') any = true;
-    });
-    if (any) rows.push(obj);
+
+  const yyyymmddMatch = strVal.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (yyyymmddMatch) {
+    const year = yyyymmddMatch[1];
+    const month = String(yyyymmddMatch[2]).padStart(2, '0');
+    const day = String(yyyymmddMatch[3]).padStart(2, '0');
+    return `${day}-${month}-${year}`;
   }
-  return rows;
+
+  const dateObj = new Date(strVal);
+  if (!isNaN(dateObj.getTime())) {
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
+  return strVal;
 }
 
 function handleHoistExcelImport(e) {
@@ -1571,7 +1589,7 @@ function handleHoistExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true, cellText: true });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -1580,7 +1598,7 @@ function handleHoistExcelImport(e) {
 
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      const rawRows = sheetToExactRows(worksheet);
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: true });
 
       if (!rawRows || rawRows.length === 0) {
         alert('❌ No data rows found in Excel sheet.');
@@ -1593,7 +1611,7 @@ function handleHoistExcelImport(e) {
         return;
       }
 
-      const existingNomSet = new Set(dbData.hoists.map(h => String(h["Nomenclature"])));
+      const existingNomSet = new Set(dbData.hoists.map(h => String(h["Nomenclature"]).trim().toUpperCase()));
 
       let autoGeneratedCount = 0;
       let newRecordsCount = 0;
@@ -1604,37 +1622,23 @@ function handleHoistExcelImport(e) {
 
       rawRows.forEach(function(row, index) {
         const mappedRecord = {};
-        const exactNames = ['Sr. No.','Plant Section','Location','Equipment Name','Equipment Location','Hoist Type','Nomenclature','Make','MFG','Details','Certificate','Test date','Due Date','Capacity','Healthiness Status','Power Supply Status','Running Status','Feeder','Pendant','Remarks','Expiry Reminder','Expired','TPI'];
-        const exactClean = {};
-        exactNames.forEach(function(n) { exactClean[n.toLowerCase().replace(/[^a-z0-9]/g, '')] = n; });
-        const usedHeaders = new Set();
-        // Pass 1: header text matches a field name exactly (ignoring case/spaces/dots)
         Object.keys(row).forEach(function(rawKey) {
-          const field = exactClean[String(rawKey).toLowerCase().replace(/[^a-z0-9]/g, '')];
-          if (field && !(field in mappedRecord)) {
-            mappedRecord[field] = row[rawKey];
-            usedHeaders.add(rawKey);
-          }
-        });
-        // Pass 2: fuzzy guess only for headers not already used and fields not already filled
-        Object.keys(row).forEach(function(rawKey) {
-          if (usedHeaders.has(rawKey)) return;
           const normKey = normalizeImportHeader(rawKey);
-          if (!(normKey in mappedRecord)) mappedRecord[normKey] = row[rawKey];
+          mappedRecord[normKey] = row[rawKey];
         });
 
-        let rawNom = String(mappedRecord["Nomenclature"] ?? '');
+        let rawNom = String(mappedRecord["Nomenclature"] || '').trim();
 
-        if (!rawNom.trim()) {
+        if (!rawNom) {
           rawNom = 'TSPL/HOIST-AUTO-' + (index + 1) + '-' + Date.now().toString().slice(-4);
           autoGeneratedCount++;
         }
 
-        let nomKey = rawNom;
+        let nomKey = rawNom.toUpperCase();
 
         if (processedInFile.has(nomKey)) {
           rawNom = rawNom + '-DUP-' + (index + 1);
-          nomKey = rawNom;
+          nomKey = rawNom.toUpperCase();
         }
         processedInFile.add(nomKey);
 
@@ -1660,31 +1664,30 @@ function handleHoistExcelImport(e) {
           }
         }
 
-        const ex = function(k) { return mappedRecord[k] === undefined || mappedRecord[k] === null ? '' : String(mappedRecord[k]); };
         const hoistObj = {
-          "Sr. No.": ex("Sr. No."),
-          "Plant Section": ex("Plant Section"),
-          "Location": ex("Location"),
-          "Equipment Name": ex("Equipment Name"),
-          "Equipment Location": ex("Equipment Location"),
-          "Hoist Type": ex("Hoist Type"),
+          "Sr. No.": String(mappedRecord["Sr. No."] || '').trim() || String(index + 1),
+          "Plant Section": String(mappedRecord["Plant Section"] || '').trim() || 'CHP',
+          "Location": String(mappedRecord["Location"] || '').trim() || 'Main Plant',
+          "Equipment Name": String(mappedRecord["Equipment Name"] || '').trim() || 'Hoist Crane',
+          "Equipment Location": String(mappedRecord["Equipment Location"] || '').trim(),
+          "Hoist Type": String(mappedRecord["Hoist Type"] || '').trim() || 'Mono Rail',
           "Nomenclature": rawNom,
-          "Make": ex("Make"),
-          "MFG": ex("MFG"),
-          "Details": ex("Details"),
-          "Certificate": ex("Certificate"),
+          "Make": String(mappedRecord["Make"] || '').trim(),
+          "MFG": String(mappedRecord["MFG"] || '').trim(),
+          "Details": String(mappedRecord["Details"] || '').trim(),
+          "Certificate": String(mappedRecord["Certificate"] || '').trim(),
           "Test date": testDate,
           "Due Date": dueDate,
-          "Capacity": ex("Capacity"),
-          "Healthiness Status": ex("Healthiness Status"),
-          "Power Supply Status": ex("Power Supply Status"),
-          "Running Status": ex("Running Status"),
-          "Feeder": ex("Feeder"),
-          "Pendant": ex("Pendant"),
-          "Remarks": ex("Remarks"),
-          "Expiry Reminder": ex("Expiry Reminder") !== '' ? ex("Expiry Reminder") : expiryReminder,
-          "Expired": ex("Expired") !== '' ? ex("Expired") : expired,
-          "TPI": ex("TPI")
+          "Capacity": String(mappedRecord["Capacity"] || '').trim(),
+          "Healthiness Status": String(mappedRecord["Healthiness Status"] || '').trim() || 'OK',
+          "Power Supply Status": String(mappedRecord["Power Supply Status"] || '').trim(),
+          "Running Status": String(mappedRecord["Running Status"] || '').trim() || 'Running',
+          "Feeder": String(mappedRecord["Feeder"] || '').trim(),
+          "Pendant": String(mappedRecord["Pendant"] || '').trim(),
+          "Remarks": String(mappedRecord["Remarks"] || '').trim(),
+          "Expiry Reminder": expiryReminder,
+          "Expired": expired,
+          "TPI": String(mappedRecord["TPI"] || '').trim()
         };
 
         recordsToUpsert.push(mapRowToSupabase(hoistObj));
@@ -1807,7 +1810,22 @@ document.addEventListener('DOMContentLoaded', async function() {
   initPortalTheme();
   initPortalLoginLayout();
   attachRippleEffect();
-  showScreen('stlp-auth-screen');
+
+  // Restore admin session (Supabase Auth) so a page refresh keeps the login
+  let restoredAdmin = false;
+  try {
+    const authClient = initSupabase();
+    if (authClient) {
+      const { data } = await authClient.auth.getSession();
+      if (data && data.session) {
+        userState.isLoggedIn = true;
+        userState.isAdmin = true;
+        restoredAdmin = true;
+      }
+    }
+  } catch (e) { /* stay logged out on any error */ }
+
+  showScreen(restoredAdmin ? 'safety-dashboard-screen' : 'stlp-auth-screen');
   updateHeader();
 
   // Load Live Data from Supabase Cloud Database on Startup
@@ -1927,7 +1945,7 @@ function mapVesselFromSupabase(item) {
 }
 
 function mapVesselToSupabase(vessel) {
-  const serialClean = String(vessel["Vessel Serial Number"] ?? '');
+  const serialClean = String(vessel["Vessel Serial Number"] || '').trim().toUpperCase();
   return {
     sn: String(vessel["SN"] || ''),
     area: String(vessel["Area"] || ''),
@@ -2754,10 +2772,15 @@ async function saveVesselRecord(e) {
   try {
 
     if (editingId) {
+      const targetRecord = dbData.vessels.find(v => String(v.id) === String(editingId));
+      const targetSerial = targetRecord
+        ? String(targetRecord["Vessel Serial Number"]).trim().toUpperCase()
+        : supabaseRow.vessel_serial_no;
+
       const { error } = await client
         .from('pressure_vessel_records')
         .update(supabaseRow)
-        .eq('id', editingId);
+        .eq('vessel_serial_no', targetSerial);
 
       if (error) {
         alert('❌ Supabase Update Error: ' + error.message);
@@ -2871,24 +2894,6 @@ function normalizeVesselHeader(rawHeader) {
   return String(rawHeader).trim();
 }
 
-/* Worksheet -> matrix of exact cell texts (same shape as header:1). Blank rows skipped. */
-function sheetToExactMatrix(ws) {
-  if (!ws || !ws['!ref']) return [];
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  const out = [];
-  for (let r = range.s.r; r <= range.e.r; r++) {
-    const row = [];
-    let any = false;
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      const val = readCellExact(ws[XLSX.utils.encode_cell({ r: r, c: c })]);
-      row.push(val);
-      if (val !== '') any = true;
-    }
-    if (any) out.push(row);
-  }
-  return out;
-}
-
 function handleVesselExcelImport(e) {
 
   if (!userState.isAdmin) {
@@ -2911,7 +2916,7 @@ function handleVesselExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true, cellText: true });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -2922,7 +2927,7 @@ function handleVesselExcelImport(e) {
       const worksheet = workbook.Sheets[firstSheetName];
 
       // Read as raw arrays so the merged Shell/Dish header pairs can be split by position
-      const matrix = sheetToExactMatrix(worksheet);
+      const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true, blankrows: false });
 
       if (!matrix || matrix.length < 2) {
         alert('❌ No data rows found in Excel sheet.');
@@ -2991,7 +2996,7 @@ function handleVesselExcelImport(e) {
       }
 
       const existingSerialSet = new Set(
-        dbData.vessels.map(v => String(v["Vessel Serial Number"]))
+        dbData.vessels.map(v => String(v["Vessel Serial Number"]).trim().toUpperCase())
       );
 
       let autoGeneratedCount = 0;
@@ -3003,18 +3008,18 @@ function handleVesselExcelImport(e) {
 
       bodyRows.forEach(function(row, index) {
 
-        let rawSerial = String(cellAt(row, 'Vessel Serial Number') ?? '');
+        let rawSerial = String(cellAt(row, 'Vessel Serial Number') || '').trim();
 
-        if (!rawSerial.trim()) {
+        if (!rawSerial) {
           rawSerial = 'TSPL/PV-AUTO-' + (index + 1) + '-' + Date.now().toString().slice(-4);
           autoGeneratedCount++;
         }
 
-        let serialKey = rawSerial;
+        let serialKey = rawSerial.toUpperCase();
 
         if (processedInFile.has(serialKey)) {
           rawSerial = rawSerial + '-DUP-' + (index + 1);
-          serialKey = rawSerial;
+          serialKey = rawSerial.toUpperCase();
         }
         processedInFile.add(serialKey);
 
@@ -3030,26 +3035,25 @@ function handleVesselExcelImport(e) {
         const hydroDays = getDaysLeft(hydroDue);
         const thickDays = getDaysLeft(thickDue);
 
-        const asText = (key) => String(cellAt(row, key) ?? '');
-        const excelOr = (key, computed) => asText(key) !== '' ? asText(key) : computed;
+        const asText = (key) => String(cellAt(row, key) || '').trim();
 
         const vesselObj = {
-          "SN": asText('SN'),
-          "Area": asText('Area'),
-          "Location": asText('Location'),
-          "Name of Vessel": asText('Name of Vessel'),
+          "SN": asText('SN') || String(index + 1),
+          "Area": asText('Area') || 'BOP',
+          "Location": asText('Location') || 'Main Plant',
+          "Name of Vessel": asText('Name of Vessel') || 'Pressure Vessel',
           "Vessel Serial Number": rawSerial,
           "Safe Working Pressure (Mfr)": asText('Safe Working Pressure (Mfr)'),
           "Test Certificate No": asText('Test Certificate No'),
           "Last Hydro Test Date": formatExcelDate(cellAt(row, 'Last Hydro Test Date')),
           "Present Hydro Test Done": formatExcelDate(cellAt(row, 'Present Hydro Test Done')),
           "Hydro Test Due Date": hydroDue,
-          "Hydro Expiry Reminder": excelOr('Hydro Expiry Reminder', (hydroDays !== null && hydroDays < 35) ? "Expiry Reminder" : ""),
-          "Hydro Expired": excelOr('Hydro Expired', (hydroDays !== null && hydroDays <= 0) ? "Expired" : ""),
+          "Hydro Expiry Reminder": (hydroDays !== null && hydroDays < 35) ? "Expiry Reminder" : "",
+          "Hydro Expired": (hydroDays !== null && hydroDays <= 0) ? "Expired" : "",
           "Last Thickness Test Date": formatExcelDate(cellAt(row, 'Last Thickness Test Date')),
           "Thickness Test Due Date": thickDue,
-          "Thickness Expiry Reminder": excelOr('Thickness Expiry Reminder', (thickDays !== null && thickDays < 35) ? "Expiry Reminder" : ""),
-          "Thickness Expired": excelOr('Thickness Expired', (thickDays !== null && thickDays <= 0) ? "Expired" : ""),
+          "Thickness Expiry Reminder": (thickDays !== null && thickDays < 35) ? "Expiry Reminder" : "",
+          "Thickness Expired": (thickDays !== null && thickDays <= 0) ? "Expired" : "",
           "Constructed Shell": asText('Constructed Shell'),
           "Constructed Dish": asText('Constructed Dish'),
           "Min Allowable Shell": asText('Min Allowable Shell'),
@@ -3057,7 +3061,7 @@ function handleVesselExcelImport(e) {
           "Measured Shell": asText('Measured Shell'),
           "Measured Dish": asText('Measured Dish'),
           "Calculated SWP": asText('Calculated SWP'),
-          "Condition": asText('Condition'),
+          "Condition": asText('Condition') || 'Good Condition',
           "TPI Observation": asText('TPI Observation')
         };
 
@@ -4738,7 +4742,7 @@ function handlePPEEmployeeExcelImport(e) {
   reader.onload = async function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -4933,7 +4937,7 @@ function handlePPERecordsExcelImport(e) {
   reader.onload = async function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -5874,7 +5878,7 @@ function handleInstrumentExcelImport(e) {
     try {
 
       const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: false, cellText: false });
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false, cellText: false });
 
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         alert('❌ Selected Excel file contains no worksheets.');
@@ -6733,6 +6737,51 @@ function renderJfcCharts(records) {
   const compLabels = Object.keys(byComp).sort((a, b) => byComp[b].total - byComp[a].total).slice(0, 10);
   renderChart('chart-jfc-company', jfcStackedConfig(compLabels, byComp, true, true));
 
+  applyJfcDashPrefs();
+
+}
+
+/* ---------- J&FC DASHBOARD SHOW/HIDE (user preference, localStorage only) ---------- */
+const JFC_DASH_IDS = ['chart-jfc-donut', 'chart-jfc-area', 'chart-jfc-month', 'chart-jfc-category', 'chart-jfc-company'];
+const JFC_DASH_KEY = 'samp_jfc_dashboards';
+
+function getJfcDashPrefs() {
+  const all = {};
+  JFC_DASH_IDS.forEach(function(id) { all[id] = true; });
+  try {
+    const raw = localStorage.getItem(JFC_DASH_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      JFC_DASH_IDS.forEach(function(id) { if (saved[id] === false) all[id] = false; });
+    }
+  } catch (e) {}
+  return all;
+}
+
+function applyJfcDashPrefs() {
+  const prefs = getJfcDashPrefs();
+  JFC_DASH_IDS.forEach(function(id) {
+    const canvas = document.getElementById(id);
+    const card = canvas ? canvas.closest('.jfc-chart-card') : null;
+    if (card) card.style.display = prefs[id] ? '' : 'none';
+    const cb = document.querySelector('[data-jfc-dash="' + id + '"]');
+    if (cb) cb.checked = prefs[id];
+  });
+}
+
+function toggleJfcDashPanel() {
+  const p = document.getElementById('jfc-dash-panel');
+  if (!p) return;
+  p.style.display = (p.style.display === 'none' || !p.style.display) ? 'block' : 'none';
+}
+
+function toggleJfcDash(cb) {
+  const id = cb.getAttribute('data-jfc-dash');
+  if (!id) return;
+  const prefs = getJfcDashPrefs();
+  prefs[id] = cb.checked;
+  try { localStorage.setItem(JFC_DASH_KEY, JSON.stringify(prefs)); } catch (e) {}
+  renderJfcModule(true);
 }
 
 

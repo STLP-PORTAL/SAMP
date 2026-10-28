@@ -1874,8 +1874,8 @@
       <p class="auth-card-sub">Sign in to manage plant safety records</p>
       <form onsubmit="return handleAdminLogin(event)">
         <div class="auth-field">
-          <label>Username</label>
-          <input type="text" id="login-username" required />
+          <label>Email</label>
+          <input type="email" id="login-username" required placeholder="admin@example.com" />
         </div>
         <div class="auth-field">
           <label>Password</label>
@@ -2348,6 +2348,16 @@
     <div class="ppe-section-heading">
       <h4>📊 Analytics</h4>
       <p>Notice split by type, area, month, category and company</p>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <button type="button" class="ppe-btn ppe-btn-secondary" onclick="toggleJfcDashPanel()">⚙️ Dashboards</button>
+      <div id="jfc-dash-panel" style="display:none;margin-top:0.75rem;" class="ppe-panel-card">
+        <label style="display:block;margin:5px 0;"><input type="checkbox" data-jfc-dash="chart-jfc-donut" onchange="toggleJfcDash(this)" checked> Notice Type Share</label>
+        <label style="display:block;margin:5px 0;"><input type="checkbox" data-jfc-dash="chart-jfc-area" onchange="toggleJfcDash(this)" checked> Notices by Area/Dept</label>
+        <label style="display:block;margin:5px 0;"><input type="checkbox" data-jfc-dash="chart-jfc-month" onchange="toggleJfcDash(this)" checked> Month-wise Notices</label>
+        <label style="display:block;margin:5px 0;"><input type="checkbox" data-jfc-dash="chart-jfc-category" onchange="toggleJfcDash(this)" checked> Top 10 Deviation Categories</label>
+        <label style="display:block;margin:5px 0;"><input type="checkbox" data-jfc-dash="chart-jfc-company" onchange="toggleJfcDash(this)" checked> Top 10 Companies</label>
+      </div>
     </div>
     <div class="jfc-chart-grid">
       <div class="ppe-panel-card jfc-chart-card">
