@@ -3357,6 +3357,7 @@ function renderPPEModule(skipScreenSwitch) {
 
   renderPPEEmployeeTable();
   renderPPEIssueTable();
+  renderPPEEmployeeSummary();
   updatePPEStats();
 }
 
@@ -3616,6 +3617,147 @@ function renderPPEIssueTable() {
       </tr>
     `;
   }).join('');
+}
+
+
+/* ------------------------------------------------------------
+   EMPLOYEE-WISE PPE SUMMARY (NEW, ADDITIVE, READ-ONLY)
+   One row per employee in ppeEmployeeData, with issue count,
+   last issue date and total quantity per PPE item, calculated
+   from ppeRecords. No record is created, edited or deleted here.
+   Qty rule: if a Qty field holds a number, that number is used;
+   if the item field is filled but its Qty is blank (older records
+   from before the Qty columns), it counts as 1. Uniform is not
+   shown: ppe_records has no Uniform column in SAMP.
+   ------------------------------------------------------------ */
+
+let ppeSummarySearchTerm = '';
+let ppeSummaryDepartment = '';
+
+function getPPEEmployeeSummaryRows() {
+  return ppeEmployeeData.map(function(emp) {
+    const gatePass = String(emp["Gate Pass No."] || '').trim();
+    const records = ppeRecords.filter(function(rec) {
+      return String(rec["Gate Pass No."] || '').trim() === gatePass;
+    });
+    let lastDate = null;
+    records.forEach(function(rec) {
+      const d = parseCustomDate(rec["Issue Date"]);
+      if (d && (!lastDate || d.getTime() > lastDate.getTime())) lastDate = d;
+    });
+    const totals = {};
+    let grandTotal = 0;
+    PPE_ISSUE_ITEM_FIELDS.forEach(function(field) {
+      let sum = 0;
+      records.forEach(function(rec) {
+        const qtyRaw = rec[field.qtyDataKey];
+        const qty = parseInt(qtyRaw, 10);
+        if (!isNaN(qty)) {
+          sum += qty;
+        } else if (String(rec[field.dataKey] || '').trim() !== '') {
+          sum += 1;
+        }
+      });
+      totals[field.key] = sum;
+      grandTotal += sum;
+    });
+    return {
+      emp: emp,
+      gatePass: gatePass,
+      issues: records.length,
+      lastDate: lastDate,
+      totals: totals,
+      grandTotal: grandTotal
+    };
+  });
+}
+
+function populatePPEEmployeeSummaryDepartments() {
+  const select = document.getElementById('ppe-summary-department');
+  if (!select) return;
+  const depts = [];
+  ppeEmployeeData.forEach(function(emp) {
+    const d = String(emp["Department"] || '').trim();
+    if (d && depts.indexOf(d) === -1) depts.push(d);
+  });
+  depts.sort(function(a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); });
+  const current = ppeSummaryDepartment;
+  select.innerHTML = '<option value="">All Departments</option>' +
+    depts.map(function(d) {
+      return '<option value="' + escapeHTML(d) + '">' + escapeHTML(d) + '</option>';
+    }).join('');
+  if (current && depts.indexOf(current) !== -1) {
+    select.value = current;
+  } else {
+    ppeSummaryDepartment = '';
+    select.value = '';
+  }
+}
+
+function applyPPEEmployeeSummarySearch() {
+  const searchInput = document.getElementById('ppe-summary-search');
+  const deptSelect = document.getElementById('ppe-summary-department');
+  ppeSummarySearchTerm = searchInput ? searchInput.value : '';
+  ppeSummaryDepartment = deptSelect ? deptSelect.value : '';
+  renderPPEEmployeeSummary();
+}
+
+function renderPPEEmployeeSummary() {
+  const tbody = document.getElementById('ppe-summary-table-body');
+  if (!tbody) return;
+  populatePPEEmployeeSummaryDepartments();
+  const term = ppeSummarySearchTerm.trim().toLowerCase();
+  const dept = ppeSummaryDepartment;
+  const rows = getPPEEmployeeSummaryRows().filter(function(row) {
+    if (dept && String(row.emp["Department"] || '').trim() !== dept) return false;
+    if (!term) return true;
+    return row.gatePass.toLowerCase().indexOf(term) !== -1 ||
+      String(row.emp["Employee Name"] || '').toLowerCase().indexOf(term) !== -1;
+  });
+  const totals = { issues: 0, grandTotal: 0 };
+  PPE_ISSUE_ITEM_FIELDS.forEach(function(field) { totals[field.key] = 0; });
+  rows.forEach(function(row) {
+    totals.issues += row.issues;
+    totals.grandTotal += row.grandTotal;
+    PPE_ISSUE_ITEM_FIELDS.forEach(function(field) { totals[field.key] += row.totals[field.key]; });
+  });
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center; color:var(--text-muted);">No employees found.</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(function(row) {
+      const emp = row.emp;
+      const gp = escapeHTML(row.gatePass);
+      const lastText = row.lastDate ? ppeFormatToDMY(row.lastDate.getDate() + '-' + (row.lastDate.getMonth() + 1) + '-' + row.lastDate.getFullYear()) : '';
+      const cells = PPE_ISSUE_ITEM_FIELDS.map(function(field) {
+        return '<td style="text-align:center;">' + row.totals[field.key] + '</td>';
+      }).join('');
+      return '<tr>' +
+        '<td><strong>' + gp + '</strong></td>' +
+        '<td>' + escapeHTML(emp["Employee Name"]) + '</td>' +
+        '<td>' + escapeHTML(emp["Department"]) + '</td>' +
+        '<td>' + escapeHTML(emp["Designation"]) + '</td>' +
+        '<td style="text-align:center;">' + row.issues + '</td>' +
+        '<td>' + lastText + '</td>' +
+        cells +
+        '<td style="text-align:center;"><strong>' + row.grandTotal + '</strong></td>' +
+        '<td><button type="button" class="stlp-btn-sm" onclick="viewEmployeePPEHistoryDirect(\'' + gp + '\')">📜 PPE History</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+  const tfoot = document.getElementById('ppe-summary-totals');
+  if (tfoot) {
+    const totalCells = PPE_ISSUE_ITEM_FIELDS.map(function(field) {
+      return '<td style="text-align:center;"><strong>' + totals[field.key] + '</strong></td>';
+    }).join('');
+    tfoot.innerHTML = '<tr>' +
+      '<td colspan="4"><strong>TOTAL (shown)</strong></td>' +
+      '<td style="text-align:center;"><strong>' + totals.issues + '</strong></td>' +
+      '<td></td>' +
+      totalCells +
+      '<td style="text-align:center;"><strong>' + totals.grandTotal + '</strong></td>' +
+      '<td></td>' +
+      '</tr>';
+  }
 }
 
 

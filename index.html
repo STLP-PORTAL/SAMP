@@ -2592,6 +2592,7 @@
             <h4>Quick Links</h4>
             <button type="button" class="ppe-link-btn" onclick="scrollToPPEPanel('ppe-employee-master-panel')">👥 View All Employees</button>
             <button type="button" class="ppe-link-btn" onclick="scrollToPPEPanel('ppe-issue-panel')">📦 View All PPE Issues</button>
+            <button type="button" class="ppe-link-btn" onclick="scrollToPPEPanel('ppe-employee-summary-panel')">📊 Employee-wise PPE Summary</button>
             <button type="button" class="ppe-link-btn" onclick="openPPEHistoryModal()">📜 Employee PPE History</button>
             <button type="button" class="ppe-link-btn" onclick="downloadPPEEmployeeFormatSample()">⬇️ Download Templates</button>
           </div>
@@ -2677,6 +2678,53 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- EMPLOYEE-WISE PPE SUMMARY (NEW, ADDITIVE, READ-ONLY) -->
+      <!-- One row per employee in Master, with issue count, last issue date -->
+      <!-- and total quantity per PPE item, calculated from ppe_records. -->
+      <!-- No Uniform column: ppe_records has no Uniform column in SAMP. -->
+      <div id="ppe-employee-summary-panel" class="ppe-panel-card" style="margin-top:1.5rem;">
+        <h4 style="margin-top:0;">Employee-wise PPE Summary</h4>
+        <p style="color:var(--text-muted); margin-top:0;">One row per employee, with total PPE issued. Calculated live from PPE Issue Records. No record is created, edited or deleted from this view. Uniform is not shown here because SAMP PPE records have no Uniform column.</p>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1rem;">
+          <input type="text" id="ppe-summary-search" placeholder="Search Gate Pass No. / Employee Name..." onkeyup="applyPPEEmployeeSummarySearch()" style="padding:6px; flex:1; min-width:180px;" />
+          <select id="ppe-summary-department" onchange="applyPPEEmployeeSummarySearch()" style="padding:6px; min-width:180px;">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+
+        <div class="stlp-table-container">
+          <table class="stlp-table">
+            <thead>
+              <tr>
+                <th>GATE PASS NO.</th>
+                <th>EMPLOYEE NAME</th>
+                <th>DEPARTMENT</th>
+                <th>DESIGNATION</th>
+                <th>ISSUES</th>
+                <th>LAST ISSUE DATE</th>
+                <th>JACKET</th>
+                <th>HELMET</th>
+                <th>GOGGLE</th>
+                <th>SHOE</th>
+                <th>ELEC. SHOE</th>
+                <th>EAR PLUG</th>
+                <th>NOSE MASK</th>
+                <th>GLOVES</th>
+                <th>TOTAL</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="ppe-summary-table-body">
+              <!-- Rendered by renderPPEEmployeeSummary() -->
+            </tbody>
+            <tfoot id="ppe-summary-totals">
+              <!-- Rendered by renderPPEEmployeeSummary() -->
+            </tfoot>
+          </table>
+        </div>
       </div>
 
     </div>
